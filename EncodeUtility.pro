@@ -13,6 +13,7 @@ TEMPLATE = app
 CONFIG += c++17
 
 TRANSLATIONS = language/lang.ja
+RC_FILE = resource.rc
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which as been marked as deprecated (the exact warnings
@@ -43,4 +44,5 @@ RESOURCES += \
     resource.qrc
 
 DISTFILES += \
-    LICENSE
+    LICENSE \
+    resource.rc
