@@ -45,4 +45,5 @@ RESOURCES += \
 
 DISTFILES += \
     LICENSE \
+    README \
     resource.rc
