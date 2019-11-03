@@ -47,6 +47,8 @@ public slots:
     void SaveProjectFile();
 
 private:
+    void SaveSettingFile(QString key, QVariant value);
+    void LoadSettingFile();
     void CheckEncoder();
     void EncodeProcess(QString execute, QString title, int num_encoding_music);
     void WindowsEncodeProcess();
@@ -62,6 +64,8 @@ private:
     QString qaacPath;
     QString lamePath;
     int processed_count;
+    bool checkQaacFile;
+    bool checkLameFile;
     DialogAppSettings* settings;
     QList<QWidget*> widgetListDisableDuringEncode;
 

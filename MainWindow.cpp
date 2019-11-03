@@ -42,7 +42,14 @@ struct StrDefines
     static constexpr char projectExtention[] = ".encproj";
     static constexpr char projectVersion[] = "1.0.0";
     static constexpr char settingOutputFolder[] = "OutputFolder";
-    static constexpr char settingAskRemoveDir[] = "AskRemoveDir";
+    static constexpr char settingCheckQaacFile[] = "CheckqaacFile";
+    static constexpr char settingCheckLameFile[] = "CheckLameFile";
+#ifdef WIN64
+    static constexpr char qaacEXEFileName[] = "qaac64.exe";
+#else
+    static constexpr char qaacEXEFileName[] = "qaac32.exe";
+#endif
+    static constexpr char lameEXEFileName[] = "lame.exe";
     static const QStringList headerItems;
 };
 const QStringList StrDefines::headerItems = {"No.", "Title", "Artist", "AlbumTitle", "AlbumArtist", "Composer", "Group", "Genre", "Year"};
@@ -67,8 +74,11 @@ MainWindow::MainWindow(QWidget *parent)
     , metadataTable(nullptr)
     , aboutLabel(new QLabel(tr("drag&drop .wav files \n or \n jacket(.png or .jpg) file here."), this))
     , settingFilePath(qApp->applicationDirPath()+"/setting.ini")
-    , qaacPath(qApp->applicationDirPath()+"/qaac.exe")
-    , lamePath(qApp->applicationDirPath()+"/lame.exe")
+    , qaacPath(qApp->applicationDirPath()+"/"+StrDefines::qaacEXEFileName)
+    , lamePath(qApp->applicationDirPath()+"/"+StrDefines::lameEXEFileName)
+    , processed_count(0)
+    , checkQaacFile(true)
+    , checkLameFile(true)
     , settings(new DialogAppSettings(this))
     , widgetListDisableDuringEncode()
 {
@@ -194,15 +204,8 @@ MainWindow::MainWindow(QWidget *parent)
         this->settings->raise();
     });
 
-    {
-        QSettings settingfile(settingFilePath, QSettings::IniFormat);
-        if(settingfile.value(StrDefines::settingOutputFolder).isValid() == false){
-            settingfile.setValue(StrDefines::settingOutputFolder, QVariant(this->ui->outputFolderPath->text()));
-        }
-        else{
-            this->ui->outputFolderPath->setText(settingfile.value(StrDefines::settingOutputFolder).toString());
-        }
-    }
+    //設定ファイルの読み込み
+    LoadSettingFile();
 
     //エンコーダーの存在チェック
     CheckEncoder();
@@ -216,45 +219,76 @@ void MainWindow::CheckEncoder()
         return hit;
     };
 
-    const QStringList lameFiles = {"lame.exe", "lame_enc.dll"};
-    bool isExistsLame = CheckExistsFile(lameFiles);
-    if(isExistsLame == false){
-        //mp3エンコードにはLameが必要です。 ダウンロードリンクを開きますか？
-        auto button = QMessageBox::warning(this, tr("Not found Lame"), tr("Lame is required for mp3 encoding. Do you want to open a download link?"),
-                                           QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
-        if(button == QMessageBox::Yes)
+    const QStringList lameFiles = {StrDefines::lameEXEFileName, "lame_enc.dll"};
+    if(this->checkLameFile)
+    {
+        bool isExistsLame = CheckExistsFile(lameFiles);
+        if(isExistsLame == false)
         {
-            QString url = "http://rarewares.org/mp3-lame-bundle.php";
-            if(QDesktopServices::openUrl(QUrl(url))){
-                QDesktopServices::openUrl(QUrl(qApp->applicationDirPath()));
-                QMessageBox::information(this, "", tr("Place \"lame.exe\" and \"lame_enc.dll\" in the same location as EncodeUtility.exe."), QMessageBox::Ok);
-            }
-            else{
-                QMessageBox::critical(this, tr("Can't open URL"), tr("Can't open URL. ") + url, QMessageBox::Ok);
+            //mp3エンコードにはLameが必要です。 ダウンロードリンクを開きますか？
+            QCheckBox* checkBox = new QCheckBox(tr("Don't show again."));
+            connect(checkBox, &QCheckBox::stateChanged, this, [this](int state){
+                this->checkLameFile = static_cast<Qt::CheckState>(state) != Qt::CheckState::Checked;
+                this->SaveSettingFile(StrDefines::settingCheckLameFile, this->checkLameFile);
+            });
+            QMessageBox msg;
+            msg.setWindowTitle(tr("Not found Lame"));
+            msg.setText(tr("Lame is required for mp3 encoding. Do you want to open a download link?"));
+            msg.setIcon(QMessageBox::Icon::Question);
+            msg.addButton(QMessageBox::Yes);
+            msg.addButton(QMessageBox::No);
+            msg.setDefaultButton(QMessageBox::Yes);
+            msg.setCheckBox(checkBox);
+
+            if(msg.exec() == QMessageBox::Yes)
+            {
+                QString url = "http://rarewares.org/mp3-lame-bundle.php";
+                if(QDesktopServices::openUrl(QUrl(url))){
+                    QDesktopServices::openUrl(QUrl(qApp->applicationDirPath()));
+                    QMessageBox::information(this, "", tr("Place \"lame.exe\" and \"lame_enc.dll\" in the same location as EncodeUtility.exe."), QMessageBox::Ok);
+                }
+                else{
+                    QMessageBox::critical(this, tr("Can't open URL"), tr("Can't open URL. ") + url, QMessageBox::Ok);
+                }
             }
         }
     }
+    this->ui->outputMp3->setEnabled(CheckExistsFile(lameFiles));
 
-    const QStringList qaacList = {"libsoxconvolver64.dll", "libsoxr64.dll", "qaac64.exe", "refalac64.exe"};
-    bool isExistsqaac = CheckExistsFile(qaacList);
-    if(isExistsqaac == false){
-        //mp3エンコードにはLameが必要です。 ダウンロードリンクを開きますか？
-        auto button = QMessageBox::warning(this, tr("Not found qaac"), tr("qaac is required for m4a encoding. Do you want to open a download link?"),
-                                           QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
-        if(button == QMessageBox::Yes)
+    const QStringList qaacList = {"libsoxconvolver64.dll", "libsoxr64.dll", StrDefines::qaacEXEFileName};
+    if(this->checkQaacFile)
+    {
+        bool isExistsqaac = CheckExistsFile(qaacList);
+        if(isExistsqaac == false)
         {
-            QString url = "https://sites.google.com/site/qaacpage/cabinet";
-            if(QDesktopServices::openUrl(QUrl(url))){
-                QDesktopServices::openUrl(QUrl(qApp->applicationDirPath()));
-                QMessageBox::information(this, "", tr("Place \"libsoxconvolver64.dll\", \"libsoxr64.dll\", \"qaac64.exe\" and \"refalac64.exe\" in the same location as EncodeUtility.exe."), QMessageBox::Ok);
-            }
-            else{
-                QMessageBox::critical(this, tr("Can't open URL"), tr("Can't open URL. ") + url, QMessageBox::Ok);
+            QCheckBox* checkBox = new QCheckBox(tr("Don't show again."));
+            connect(checkBox, &QCheckBox::stateChanged, this, [this](int state){
+                this->checkQaacFile = static_cast<Qt::CheckState>(state) != Qt::CheckState::Checked;
+                this->SaveSettingFile(StrDefines::settingCheckQaacFile, this->checkQaacFile);
+            });
+            QMessageBox msg;
+            msg.setWindowTitle(tr("Not found qaac"));
+            msg.setText(tr("qaac is required for m4a encoding. Do you want to open a download link?"));
+            msg.setIcon(QMessageBox::Icon::Question);
+            msg.addButton(QMessageBox::Yes);
+            msg.addButton(QMessageBox::No);
+            msg.setDefaultButton(QMessageBox::Yes);
+            msg.setCheckBox(checkBox);
+            //mp3エンコードにはLameが必要です。 ダウンロードリンクを開きますか？
+            if(msg.exec() == QMessageBox::Yes)
+            {
+                QString url = "https://sites.google.com/site/qaacpage/cabinet";
+                if(QDesktopServices::openUrl(QUrl(url))){
+                    QDesktopServices::openUrl(QUrl(qApp->applicationDirPath()));
+                    QMessageBox::information(this, "", tr("Place \"libsoxconvolver64.dll\", \"libsoxr64.dll\" and \"%1\"in the same location as EncodeUtility.exe.").arg(StrDefines::qaacEXEFileName), QMessageBox::Ok);
+                }
+                else{
+                    QMessageBox::critical(this, tr("Can't open URL"), tr("Can't open URL. ") + url, QMessageBox::Ok);
+                }
             }
         }
     }
     this->ui->outputM4a->setEnabled(CheckExistsFile(qaacList));
-    this->ui->outputMp3->setEnabled(CheckExistsFile(lameFiles));
 }
 
 MainWindow::~MainWindow()
@@ -413,6 +447,20 @@ void MainWindow::SaveProjectFile()
     }
 }
 
+void MainWindow::SaveSettingFile(QString key, QVariant value)
+{
+    QSettings settingfile(settingFilePath, QSettings::IniFormat);
+    settingfile.setValue(key, value);
+}
+
+void MainWindow::LoadSettingFile()
+{
+    QSettings settingfile(settingFilePath, QSettings::IniFormat);
+    this->ui->outputFolderPath->setText(settingfile.value(StrDefines::settingOutputFolder, this->ui->outputFolderPath->text()).toString());
+    this->checkQaacFile = settingfile.value(StrDefines::settingCheckQaacFile, true).toBool();
+    this->checkLameFile = settingfile.value(StrDefines::settingCheckLameFile, true).toBool();
+}
+
 void MainWindow::loadProjectFile(QString projFilePath)
 {
     if(projFilePath.isEmpty()){ return; }
@@ -473,16 +521,6 @@ void MainWindow::Encode()
     this->ui->tabWidget->setCurrentIndex(1);    //ログウィジェットを表示
 
     const QString outputFolder = this->ui->outputFolderPath->text();
-    if(QDir().exists(outputFolder))
-    {
-        QDir dir(outputFolder);
-        // 該当ファイル情報を取得
-        QFileInfoList infolist = dir.entryInfoList(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot);
-        for(const QFileInfo& fileInfo : infolist){
-            QDir(fileInfo.filePath()).removeRecursively();
-        }
-    }
-
     const bool isExistsqaac = QFile::exists(qaacPath);
     const bool isExistsLame = QFile::exists(lamePath);
     //出力先フォルダを作成 エンコーダーの有無・出力チェックの状態に応じてフォルダを作成
@@ -568,7 +606,7 @@ void MainWindow::WindowsEncodeProcess()
         //トラック番号をファイル名に含めるか
 
         if(isExistsqaac == false){
-           this->ui->statusBar->showMessage(tr("Not found qaac64.exe"), 3000);
+           this->ui->statusBar->showMessage(tr("Not found %1").arg(StrDefines::qaacEXEFileName), 3000);
         }
         else if(this->ui->outputM4a->isChecked())
         {

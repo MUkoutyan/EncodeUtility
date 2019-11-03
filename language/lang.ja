@@ -201,7 +201,7 @@
         <translation type="vanished">設定...</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="51"/>
+        <location filename="../MainWindow.cpp" line="75"/>
         <source>drag&amp;drop .wav files 
  or 
  jacket(.png or .jpg) file here.</source>
@@ -210,114 +210,136 @@
 ジャケットファイル(.png か .jpg)をドラッグ &amp; ドロップ。</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="80"/>
+        <location filename="../MainWindow.cpp" line="109"/>
         <source>Open Project File</source>
         <translation>プロジェクトファイルを開く</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="81"/>
-        <location filename="../MainWindow.cpp" line="387"/>
+        <location filename="../MainWindow.cpp" line="110"/>
+        <location filename="../MainWindow.cpp" line="442"/>
         <source>project file(*%1)</source>
         <translation>プロジェクトファイル(*%1)</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="124"/>
+        <location filename="../MainWindow.cpp" line="153"/>
         <source>Open Directory</source>
         <translation>ディレクトリを開く</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="133"/>
+        <location filename="../MainWindow.cpp" line="162"/>
         <source>Delete Artwork</source>
         <translation>アートワークを削除</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="149"/>
+        <location filename="../MainWindow.cpp" line="178"/>
         <source>Delete Row</source>
         <translation>この行を削除</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="204"/>
+        <location filename="../MainWindow.cpp" line="229"/>
+        <location filename="../MainWindow.cpp" line="264"/>
+        <source>Don&apos;t show again.</source>
+        <translation>今後表示しない。</translation>
+    </message>
+    <message>
+        <location filename="../MainWindow.cpp" line="235"/>
         <source>Not found Lame</source>
         <translation>Lameが見つかりません</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="204"/>
+        <location filename="../MainWindow.cpp" line="236"/>
         <source>Lame is required for mp3 encoding. Do you want to open a download link?</source>
         <translation>mp3エンコードにはLameが必要です。 ダウンロードリンクを開きますか？</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="211"/>
+        <location filename="../MainWindow.cpp" line="248"/>
         <source>Place &quot;lame.exe&quot; and &quot;lame_enc.dll&quot; in the same location as EncodeUtility.exe.</source>
         <translation>EncodeUtility.exeと同じ場所に&quot;lame.exe&quot;と&quot;lame_enc.dll&quot;を置いて下さい。</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="214"/>
-        <location filename="../MainWindow.cpp" line="233"/>
+        <location filename="../MainWindow.cpp" line="251"/>
+        <location filename="../MainWindow.cpp" line="286"/>
         <source>Can&apos;t open URL</source>
         <translation>URLを開くことが出来ません</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="214"/>
-        <location filename="../MainWindow.cpp" line="233"/>
+        <location filename="../MainWindow.cpp" line="251"/>
+        <location filename="../MainWindow.cpp" line="286"/>
         <source>Can&apos;t open URL. </source>
         <translation>URLを開くことが出来ません。</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="223"/>
+        <location filename="../MainWindow.cpp" line="270"/>
         <source>Not found qaac</source>
         <translation>qaacが見つかりません</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="223"/>
+        <location filename="../MainWindow.cpp" line="271"/>
         <source>qaac is required for m4a encoding. Do you want to open a download link?</source>
         <translation>m4aエンコードにはqaacが必要です。 ダウンロードリンクを開きますか？</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="230"/>
-        <source>Place &quot;libsoxconvolver64.dll&quot;, &quot;libsoxr64.dll&quot;, &quot;qaac64.exe&quot; and &quot;refalac64.exe&quot; in the same location as EncodeUtility.exe.</source>
-        <translation>EncodeUtility.exeと同じ場所に&quot;libsoxconvolver64.dll&quot;,&quot;libsoxr64.dll&quot;,&quot;qaac64.exe&quot;, &quot;refalac64.exe&quot;を置いて下さい。</translation>
+        <location filename="../MainWindow.cpp" line="283"/>
+        <source>Place &quot;libsoxconvolver64.dll&quot;, &quot;libsoxr64.dll&quot; and &quot;%1&quot;in the same location as EncodeUtility.exe.</source>
+        <translation>EncodeUtility.exeと同じ場所に&quot;libsoxconvolver64.dll&quot;,&quot;libsoxr64.dll&quot;,&quot;%1&quot;,を置いて下さい。</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="386"/>
+        <location filename="../MainWindow.cpp" line="609"/>
+        <source>Not found %1</source>
+        <translation>%1が見つかりません</translation>
+    </message>
+    <message>
+        <source>Place &quot;libsoxconvolver64.dll&quot;, &quot;libsoxr64.dll&quot;, &quot;qaac64.exe&quot; and &quot;refalac64.exe&quot; in the same location as EncodeUtility.exe.</source>
+        <translation type="vanished">EncodeUtility.exeと同じ場所に&quot;libsoxconvolver64.dll&quot;,&quot;libsoxr64.dll&quot;,&quot;qaac64.exe&quot;, &quot;refalac64.exe&quot;を置いて下さい。</translation>
+    </message>
+    <message>
+        <location filename="../MainWindow.cpp" line="441"/>
         <source>Save Project File</source>
         <translation>プロジェクトファイルを保存</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="447"/>
+        <location filename="../MainWindow.cpp" line="516"/>
         <source>Start Encoding.</source>
         <translation>エンコードを開始。</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="513"/>
+        <source>The default is not to delete. And don&apos;t show this again</source>
+        <translation type="vanished">削除しないのをデフォルトにして、再度表示しない</translation>
+    </message>
+    <message>
+        <source>%1 already contains a file. Press [Yes] to delete all the contents of the folder.</source>
+        <translation type="vanished">%1の中には既にファイルが含まれています。Yesを押すとフォルダの中身を全て削除します。</translation>
+    </message>
+    <message>
+        <location filename="../MainWindow.cpp" line="561"/>
         <source>Finish Encoding. %1/%2</source>
         <translation>エンコードが完了しました。 %1/%2</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="519"/>
-        <location filename="../MainWindow.cpp" line="520"/>
+        <location filename="../MainWindow.cpp" line="567"/>
+        <location filename="../MainWindow.cpp" line="568"/>
         <source>Complete.</source>
         <translation>完了。</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="551"/>
         <source>Not found qaac64.exe</source>
-        <translation>qaacが見つかりません</translation>
+        <translation type="vanished">qaacが見つかりません</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="579"/>
-        <location filename="../MainWindow.cpp" line="656"/>
+        <location filename="../MainWindow.cpp" line="637"/>
+        <location filename="../MainWindow.cpp" line="724"/>
         <source>start aac encoding : %1(%2/%3)
 </source>
         <translation>m4aエンコードを開始します %1(%2/%3)</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="585"/>
+        <location filename="../MainWindow.cpp" line="643"/>
         <source>Not found lame.exe</source>
         <translation>Lameが見つかりません</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="608"/>
-        <location filename="../MainWindow.cpp" line="661"/>
+        <location filename="../MainWindow.cpp" line="666"/>
+        <location filename="../MainWindow.cpp" line="729"/>
         <source>start mp3 encoding : %1(%2/%3)
 </source>
         <translation>mp3エンコードを開始します %1(%2/%3)</translation>
@@ -326,24 +348,20 @@
 <context>
     <name>MetadataTableItemModel</name>
     <message>
-        <location filename="../MetadataTableItemModel.cpp" line="18"/>
         <source>Title</source>
-        <translation type="unfinished">タイトル</translation>
+        <translation type="obsolete">タイトル</translation>
     </message>
     <message>
-        <location filename="../MetadataTableItemModel.cpp" line="20"/>
         <source>Artist</source>
-        <translation type="unfinished">アーティスト</translation>
+        <translation type="obsolete">アーティスト</translation>
     </message>
     <message>
-        <location filename="../MetadataTableItemModel.cpp" line="22"/>
         <source>AlbumTitle</source>
-        <translation type="unfinished">アルバムタイトル</translation>
+        <translation type="obsolete">アルバムタイトル</translation>
     </message>
     <message>
-        <location filename="../MetadataTableItemModel.cpp" line="24"/>
         <source>Genre</source>
-        <translation type="unfinished">ジャンル</translation>
+        <translation type="obsolete">ジャンル</translation>
     </message>
 </context>
 </TS>
