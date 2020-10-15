@@ -44,12 +44,13 @@ public:
 
 public slots:
     void Encode();
-    void SaveProjectFile();
+    void SaveProjectFile(QString saveFilePath);
+    void CheckEnableEncodeButton();
 
 private:
     void SaveSettingFile(QString key, QVariant value);
     void LoadSettingFile();
-    void CheckEncoder();
+    bool CheckEncoder();
     void EncodeProcess(QString execute, QString title, int num_encoding_music);
     void WindowsEncodeProcess();
     void MacEncodeProcess();
@@ -63,11 +64,16 @@ private:
     QString settingFilePath;
     QString qaacPath;
     QString lamePath;
+    QString mp3OutputPath;
+    QString m4aOutputPath;
+    QString wavOutputPath;
+    QString imageOutputPath;
     int processed_count;
     bool checkQaacFile;
     bool checkLameFile;
     DialogAppSettings* settings;
     QList<QWidget*> widgetListDisableDuringEncode;
+    QString lastLoadProject;
 
 };
 

@@ -33,6 +33,9 @@ public:
     explicit DialogAppSettings(QWidget *parent = 0);
     ~DialogAppSettings();
 
+    void SetLastOpenedDirectory(QString path);
+    QString GetLastOpenedDirectory() const;
+
     QString GetFFmpegPath() const;
     QString GetAACEncodeSetting() const;
     QString GetMP3EncodeSetting() const;
@@ -43,6 +46,7 @@ public:
 
 private:
     Ui::DialogAppSettings *ui;
+    QString lastOpenedDir;
 };
 
 #endif // DIALOGAPPSETTINGS_H

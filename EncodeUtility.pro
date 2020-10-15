@@ -28,11 +28,14 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 
 SOURCES += \
+    Encoder.cpp \
         main.cpp \
         MainWindow.cpp \
     DialogAppSettings.cpp
 
 HEADERS += \
+    AudioMetaData.hpp \
+    Encoder.h \
         MainWindow.h \
     DialogAppSettings.h
 

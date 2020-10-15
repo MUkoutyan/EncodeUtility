@@ -34,13 +34,15 @@
 #include <QSettings>
 #include <QMessageBox>
 #include <QDesktopServices>
+#include <QTextStream>
 
 #include <QDebug>
 
-struct StrDefines
+struct ProjectDefines
 {
     static constexpr char projectExtention[] = ".encproj";
-    static constexpr char projectVersion[] = "1.0.0";
+    static constexpr int  projectVersionNum  = 0x010001;
+    static constexpr char projectVersion[]   = "1.0.1";
     static constexpr char settingOutputFolder[] = "OutputFolder";
     static constexpr char settingCheckQaacFile[] = "CheckqaacFile";
     static constexpr char settingCheckLameFile[] = "CheckLameFile";
@@ -52,7 +54,7 @@ struct StrDefines
     static constexpr char lameEXEFileName[] = "lame.exe";
     static const QStringList headerItems;
 };
-const QStringList StrDefines::headerItems = {"No.", "Title", "Artist", "AlbumTitle", "AlbumArtist", "Composer", "Group", "Genre", "Year"};
+const QStringList ProjectDefines::headerItems = {"No.", "Title", "Artist", "AlbumTitle", "AlbumArtist", "Composer", "Group", "Genre", "Year"};
 
 enum TableColumn
 {
@@ -74,21 +76,45 @@ MainWindow::MainWindow(QWidget *parent)
     , metadataTable(nullptr)
     , aboutLabel(new QLabel(tr("drag&drop .wav files \n or \n jacket(.png or .jpg) file here."), this))
     , settingFilePath(qApp->applicationDirPath()+"/setting.ini")
-    , qaacPath(qApp->applicationDirPath()+"/"+StrDefines::qaacEXEFileName)
-    , lamePath(qApp->applicationDirPath()+"/"+StrDefines::lameEXEFileName)
+    , qaacPath(qApp->applicationDirPath()+"/"+ProjectDefines::qaacEXEFileName)
+    , lamePath(qApp->applicationDirPath()+"/"+ProjectDefines::lameEXEFileName)
+    , mp3OutputPath("mp3")
+    , m4aOutputPath("m4a")
+    , wavOutputPath("wav")
+    , imageOutputPath("")
     , processed_count(0)
     , checkQaacFile(true)
     , checkLameFile(true)
     , settings(new DialogAppSettings(this))
-    , widgetListDisableDuringEncode()
+    , widgetListDisableDuringEncode({})
+    , lastLoadProject("")
 {
     ui->setupUi(this);
 
+    auto toolVer = this->ui->menuAbout->addAction("Version 1.0.2");
+    toolVer->setEnabled(false);
+    auto projVer = this->ui->menuAbout->addAction(QString("Project Version ") + ProjectDefines::projectVersion);
+    projVer->setEnabled(false);
+
+    //スタイルシートの設定
+    QFile file(":qss/style/style.qss");
+    if (file.open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        QTextStream in(&file);
+        QString text;
+        text = in.readAll();
+        this->setStyleSheet(text);
+    }
+    file.close();
+
     widgetListDisableDuringEncode = {
         this->ui->encodeButton, this->ui->tableWidget,
-        this->ui->outputM4a,    this->ui->outputMp3,
-        this->ui->outputWav,    this->ui->includeImage,
-        this->ui->outputFolderPath
+        this->ui->outputMp3,    this->ui->baseFolder1, this->ui->mp3OutputPath,
+        this->ui->outputM4a,    this->ui->baseFolder2, this->ui->m4aOutputPath,
+        this->ui->outputWav,    this->ui->baseFolder3, this->ui->wavOutputPath,
+        this->ui->includeImage, this->ui->baseFolder4, this->ui->imageOutputPath,
+        this->ui->outputFolderPath,
+        this->ui->check_addTrackNo, this->ui->label_2, this->ui->track_no_delimiter, this->ui->label_3, this->ui->num_of_digit
     };
 
     this->tableMenu = new QMenu(this->ui->tableWidget);
@@ -102,16 +128,42 @@ MainWindow::MainWindow(QWidget *parent)
     this->ui->artwork->setVisible(false);
 
     //メニュー
-    connect(this->ui->actionSave_file, &QAction::triggered, this, &MainWindow::SaveProjectFile);
-
-    connect(this->ui->actionLoad_file, &QAction::trigger, [this]()
+    connect(this->ui->actionSave_file, &QAction::triggered, [this]()
     {
-        auto openfilePath = QFileDialog::getOpenFileName(this, tr("Open Project File"),QStandardPaths::standardLocations(QStandardPaths::DocumentsLocation)[0],
-                                                         tr("project file(*%1)").arg(StrDefines::projectExtention));
-        this->loadProjectFile(openfilePath);
+        QString savefilePath = this->lastLoadProject;
+        if(savefilePath.isEmpty()){
+           savefilePath = QFileDialog::getSaveFileName(this, tr("Save Project File"),QStandardPaths::standardLocations(QStandardPaths::DocumentsLocation)[0],
+                                                             tr("project file(*%1)").arg(ProjectDefines::projectExtention));
+        }
+        this->SaveProjectFile(savefilePath);
+    });
+    connect(this->ui->actionSave_as, &QAction::triggered, [this]()
+    {
+        auto savefilePath = QFileDialog::getSaveFileName(this, tr("Save Project File"),QStandardPaths::standardLocations(QStandardPaths::DocumentsLocation)[0],
+                                                               tr("project file(*%1)").arg(ProjectDefines::projectExtention));
+        this->SaveProjectFile(savefilePath);
+    });
+
+
+    connect(this->ui->actionLoad_file, &QAction::triggered, [this]()
+    {
+        auto location = this->lastLoadProject;
+        if(location.isEmpty()){
+            location = QStandardPaths::standardLocations(QStandardPaths::DocumentsLocation)[0];
+        }
+        auto openfilePath = QFileDialog::getOpenFileName(this, tr("Open Project File"), location,
+                                                               tr("project file(*%1)").arg(ProjectDefines::projectExtention));
+        settings->SetLastOpenedDirectory(openfilePath);
+        this->openFiles({openfilePath});
     });
 
     //出力先の取得と表示
+    connect(this->ui->outputFolderPath, &QLineEdit::textChanged, [this](QString path){
+        this->ui->baseFolder1->setText(path+"/");
+        this->ui->baseFolder2->setText(path+"/");
+        this->ui->baseFolder3->setText(path+"/");
+        this->ui->baseFolder4->setText(path+"/");
+    });
     auto filePathList = QStandardPaths::standardLocations(QStandardPaths::DocumentsLocation);
     QString homeDir = filePathList[0];
     this->ui->outputFolderPath->setText(homeDir+"/EncodeUtilityFolder");
@@ -129,24 +181,69 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(this->ui->encodeButton, &QPushButton::clicked, this, &MainWindow::Encode);
 
-    connect(this->ui->expandOption, &QPushButton::clicked, [this](){
-        this->ui->outputM4a->setVisible(!this->ui->outputM4a->isVisible());
-        this->ui->outputMp3->setVisible(!this->ui->outputMp3->isVisible());
-        this->ui->outputWav->setVisible(!this->ui->outputWav->isVisible());
-        this->ui->includeImage->setVisible(!this->ui->includeImage->isVisible());
+    connect(this->ui->expandOption, &QPushButton::clicked, [this]()
+    {
+        auto ChangeVisible = [](QWidget* w){ w->setVisible(!w->isVisible()); };
+        ChangeVisible(this->ui->outputMp3);
+        ChangeVisible(this->ui->baseFolder1);
+        ChangeVisible(this->ui->mp3OutputPath);
+
+        ChangeVisible(this->ui->outputM4a);
+        ChangeVisible(this->ui->baseFolder2);
+        ChangeVisible(this->ui->m4aOutputPath);
+
+        ChangeVisible(this->ui->outputWav);
+        ChangeVisible(this->ui->baseFolder3);
+        ChangeVisible(this->ui->wavOutputPath);
+
+        ChangeVisible(this->ui->includeImage);
+        ChangeVisible(this->ui->baseFolder4);
+        ChangeVisible(this->ui->imageOutputPath);
+
+        ChangeVisible(this->ui->check_addTrackNo);
+        ChangeVisible(this->ui->label_2);
+        ChangeVisible(this->ui->track_no_delimiter);
+        ChangeVisible(this->ui->label_3);
+        ChangeVisible(this->ui->num_of_digit);
     });
 
-    auto CheckEnableEncodeButton = [this]()
-    {
-        if(this->ui->tableWidget->rowCount() == 0){ return; }
-        bool isEnable = false;
-        isEnable |= this->ui->outputM4a->isChecked();
-        isEnable |= this->ui->outputMp3->isChecked();
-        isEnable |= this->ui->outputWav->isChecked();
-        isEnable |= this->ui->includeImage->isChecked();
-        this->ui->encodeButton->setEnabled(isEnable);
-    };
-    connect(this->ui->outputM4a, &QCheckBox::clicked, CheckEnableEncodeButton);
+    connect(this->ui->m4aOutputPath, &QLineEdit::textEdited, [this](QString text){
+        this->m4aOutputPath = std::move(text);
+    });
+    connect(this->ui->mp3OutputPath, &QLineEdit::textEdited, [this](QString text){
+        this->mp3OutputPath = std::move(text);
+    });
+    connect(this->ui->wavOutputPath, &QLineEdit::textEdited, [this](QString text){
+        this->wavOutputPath = std::move(text);
+    });
+    connect(this->ui->imageOutputPath, &QLineEdit::textEdited, [this](QString text){
+        this->imageOutputPath = std::move(text);
+    });
+    this->ui->m4aOutputPath->setText(this->m4aOutputPath);
+    this->ui->mp3OutputPath->setText(this->mp3OutputPath);
+    this->ui->wavOutputPath->setText(this->wavOutputPath);
+    this->ui->imageOutputPath->setText(this->imageOutputPath);
+
+    connect(this->ui->outputM4a,    &QCheckBox::clicked, [this](bool checked){
+        this->CheckEnableEncodeButton();
+        this->ui->baseFolder2->setEnabled(checked);
+        this->ui->m4aOutputPath->setEnabled(checked);
+    });
+    connect(this->ui->outputMp3,    &QCheckBox::clicked, [this](bool checked){
+        this->CheckEnableEncodeButton();
+        this->ui->baseFolder1->setEnabled(checked);
+        this->ui->mp3OutputPath->setEnabled(checked);
+    });
+    connect(this->ui->outputWav,    &QCheckBox::clicked, [this](bool checked){
+        this->CheckEnableEncodeButton();
+        this->ui->baseFolder3->setEnabled(checked);
+        this->ui->wavOutputPath->setEnabled(checked);
+    });
+    connect(this->ui->includeImage, &QCheckBox::clicked, [this](bool checked){
+        this->CheckEnableEncodeButton();
+        this->ui->baseFolder4->setEnabled(checked);
+        this->ui->imageOutputPath->setEnabled(checked);
+    });
 
     connect(this->ui->selectFolder, &QToolButton::clicked, [this]()
     {
@@ -204,6 +301,13 @@ MainWindow::MainWindow(QWidget *parent)
         this->settings->raise();
     });
 
+    connect(this->ui->actionCheck_Encoder, &QAction::triggered, [this](){
+        if(this->CheckEncoder()){
+            //エンコーダーを正しく認識しています。
+            QMessageBox::information(this, tr("Check Encoder"), tr("The encoder is correctly identified."));
+        }
+    });
+
     //設定ファイルの読み込み
     LoadSettingFile();
 
@@ -211,7 +315,7 @@ MainWindow::MainWindow(QWidget *parent)
     CheckEncoder();
 }
 
-void MainWindow::CheckEncoder()
+bool MainWindow::CheckEncoder()
 {
     auto CheckExistsFile = [](QStringList list){
         bool hit = true;
@@ -219,7 +323,7 @@ void MainWindow::CheckEncoder()
         return hit;
     };
 
-    const QStringList lameFiles = {StrDefines::lameEXEFileName, "lame_enc.dll"};
+    const QStringList lameFiles = {ProjectDefines::lameEXEFileName, "lame_enc.dll"};
     if(this->checkLameFile)
     {
         bool isExistsLame = CheckExistsFile(lameFiles);
@@ -229,7 +333,7 @@ void MainWindow::CheckEncoder()
             QCheckBox* checkBox = new QCheckBox(tr("Don't show again."));
             connect(checkBox, &QCheckBox::stateChanged, this, [this](int state){
                 this->checkLameFile = static_cast<Qt::CheckState>(state) != Qt::CheckState::Checked;
-                this->SaveSettingFile(StrDefines::settingCheckLameFile, this->checkLameFile);
+                this->SaveSettingFile(ProjectDefines::settingCheckLameFile, this->checkLameFile);
             });
             QMessageBox msg;
             msg.setWindowTitle(tr("Not found Lame"));
@@ -253,9 +357,11 @@ void MainWindow::CheckEncoder()
             }
         }
     }
-    this->ui->outputMp3->setEnabled(CheckExistsFile(lameFiles));
+    const bool existsLame = CheckExistsFile(lameFiles);
+    this->ui->outputMp3->setEnabled(existsLame);
+    this->ui->outputMp3->setChecked(existsLame);
 
-    const QStringList qaacList = {"libsoxconvolver64.dll", "libsoxr64.dll", StrDefines::qaacEXEFileName};
+    const QStringList qaacList = {"libsoxconvolver64.dll", "libsoxr64.dll", ProjectDefines::qaacEXEFileName};
     if(this->checkQaacFile)
     {
         bool isExistsqaac = CheckExistsFile(qaacList);
@@ -264,7 +370,7 @@ void MainWindow::CheckEncoder()
             QCheckBox* checkBox = new QCheckBox(tr("Don't show again."));
             connect(checkBox, &QCheckBox::stateChanged, this, [this](int state){
                 this->checkQaacFile = static_cast<Qt::CheckState>(state) != Qt::CheckState::Checked;
-                this->SaveSettingFile(StrDefines::settingCheckQaacFile, this->checkQaacFile);
+                this->SaveSettingFile(ProjectDefines::settingCheckQaacFile, this->checkQaacFile);
             });
             QMessageBox msg;
             msg.setWindowTitle(tr("Not found qaac"));
@@ -280,7 +386,7 @@ void MainWindow::CheckEncoder()
                 QString url = "https://sites.google.com/site/qaacpage/cabinet";
                 if(QDesktopServices::openUrl(QUrl(url))){
                     QDesktopServices::openUrl(QUrl(qApp->applicationDirPath()));
-                    QMessageBox::information(this, "", tr("Place \"libsoxconvolver64.dll\", \"libsoxr64.dll\" and \"%1\"in the same location as EncodeUtility.exe.").arg(StrDefines::qaacEXEFileName), QMessageBox::Ok);
+                    QMessageBox::information(this, "", tr("Place \"libsoxconvolver64.dll\", \"libsoxr64.dll\" and \"%1\"in the same location as EncodeUtility.exe.").arg(ProjectDefines::qaacEXEFileName), QMessageBox::Ok);
                 }
                 else{
                     QMessageBox::critical(this, tr("Can't open URL"), tr("Can't open URL. ") + url, QMessageBox::Ok);
@@ -288,7 +394,11 @@ void MainWindow::CheckEncoder()
             }
         }
     }
-    this->ui->outputM4a->setEnabled(CheckExistsFile(qaacList));
+    const bool existsQaac = CheckExistsFile(qaacList);
+    this->ui->outputM4a->setEnabled(existsQaac);
+    this->ui->outputM4a->setChecked(existsQaac);
+
+    return existsLame && existsQaac;
 }
 
 MainWindow::~MainWindow()
@@ -328,7 +438,7 @@ void MainWindow::openFiles(QStringList pathList)
     int row = this->ui->tableWidget->rowCount();
     for(QString path : pathList)
     {
-        QString extension = QFileInfo(path).suffix().toUpper();
+        const QString extension = QFileInfo(path).suffix().toUpper();
 
         if(extension == "ENCPROJ"){
             this->loadProjectFile(std::move(path));
@@ -344,9 +454,8 @@ void MainWindow::openFiles(QStringList pathList)
             continue;
         }
 
-        if(extension != "WAV"){
-            continue;
-        }
+        if(extension != "WAV"){ continue; }
+
         QString track_no = QString("%1").arg(row);
         QString title = path.mid(path.lastIndexOf("/")+1).section(".", 0, 0);
         QString albumTitle = "";
@@ -355,7 +464,7 @@ void MainWindow::openFiles(QStringList pathList)
 
         //区切り文字で分けられればメタデータをファイル名から取得
         QStringList metaDatas = title.split('_');
-        int size = metaDatas.size();
+        const int size = metaDatas.size();
         if(size > 0)
         {
             //意図的なフォールスルー
@@ -407,21 +516,34 @@ void MainWindow::openFiles(QStringList pathList)
     //項目があればエンコードボタンを有効
     if(this->ui->tableWidget->rowCount() > 0){
         this->ui->encodeButton->setEnabled(true);
+        this->ui->actionSave_as->setEnabled(true);
         this->ui->actionSave_file->setEnabled(true);
     }
 }
 
-void MainWindow::SaveProjectFile()
+void MainWindow::SaveProjectFile(QString saveFilePath)
 {
     // project version
     // output path
     // image path
+
+    // ### Ver.1.0.2
+    // addTrackNo Flag
+    // delimiter
+    // fill digit
+
     // no., title, artist, albumtitle...
     // no., title, artist, albumtitle...
+    if(saveFilePath.isEmpty()){ return; }
+
     QStringList tableList;
-    tableList.append(StrDefines::projectVersion);
+    tableList.append(QString::number(ProjectDefines::projectVersionNum));
     tableList.append(this->ui->outputFolderPath->text());
     tableList.append(this->artworkPath);
+
+    tableList.append(QVariant(this->ui->check_addTrackNo->isChecked()).toString());
+    tableList.append(this->ui->track_no_delimiter->text());
+    tableList.append(QString::number(this->ui->num_of_digit->value()));
 
     const int row = this->ui->tableWidget->rowCount();
     const int col = this->ui->tableWidget->columnCount();
@@ -438,13 +560,24 @@ void MainWindow::SaveProjectFile()
         }
     }
 
-    auto savefilePath = QFileDialog::getSaveFileName(this, tr("Save Project File"),QStandardPaths::standardLocations(QStandardPaths::DocumentsLocation)[0],
-                                                     tr("project file(*%1)").arg(StrDefines::projectExtention));
-    if(savefilePath.isEmpty()){ return; }
-    QFile file(savefilePath);
+    QFile file(saveFilePath);
     if(file.open(QFile::WriteOnly)){
         file.write(tableList.join(',').toLocal8Bit());
     }
+    this->lastLoadProject = saveFilePath;
+
+    this->ui->statusBar->showMessage(tr("File saved."), 3000);
+}
+
+void MainWindow::CheckEnableEncodeButton()
+{
+    if(this->ui->tableWidget->rowCount() == 0){ return; }
+    bool isEnable = false;
+    isEnable |= this->ui->outputM4a->isChecked();
+    isEnable |= this->ui->outputMp3->isChecked();
+    isEnable |= this->ui->outputWav->isChecked();
+    isEnable |= this->ui->includeImage->isChecked();
+    this->ui->encodeButton->setEnabled(isEnable);
 }
 
 void MainWindow::SaveSettingFile(QString key, QVariant value)
@@ -456,9 +589,9 @@ void MainWindow::SaveSettingFile(QString key, QVariant value)
 void MainWindow::LoadSettingFile()
 {
     QSettings settingfile(settingFilePath, QSettings::IniFormat);
-    this->ui->outputFolderPath->setText(settingfile.value(StrDefines::settingOutputFolder, this->ui->outputFolderPath->text()).toString());
-    this->checkQaacFile = settingfile.value(StrDefines::settingCheckQaacFile, true).toBool();
-    this->checkLameFile = settingfile.value(StrDefines::settingCheckLameFile, true).toBool();
+    this->ui->outputFolderPath->setText(settingfile.value(ProjectDefines::settingOutputFolder, this->ui->outputFolderPath->text()).toString());
+    this->checkQaacFile = settingfile.value(ProjectDefines::settingCheckQaacFile, true).toBool();
+    this->checkLameFile = settingfile.value(ProjectDefines::settingCheckLameFile, true).toBool();
 }
 
 void MainWindow::loadProjectFile(QString projFilePath)
@@ -469,17 +602,25 @@ void MainWindow::loadProjectFile(QString projFilePath)
     if(file.open(QFile::ReadOnly) == false){ return; }
 
     this->ui->tableWidget->clear();
+    this->ui->tableWidget->setRowCount(0);
     this->ui->outputFolderPath->setText("");
     this->artworkPath = "";
 
     this->ui->tableWidget->setColumnCount(ALL);
-    this->ui->tableWidget->setHorizontalHeaderLabels(StrDefines::headerItems);
+    this->ui->tableWidget->setHorizontalHeaderLabels(ProjectDefines::headerItems);
 
     auto data = file.readAll();
     auto strList = QString::fromLocal8Bit(data).split(",");
-    int index = 1;
+    int index = 0;
+    auto projVersion = strList[index++].toInt();
     this->ui->outputFolderPath->setText(strList[index++]);
     this->artworkPath = strList[index++];
+
+    if(0x010001 <= projVersion){
+        this->ui->check_addTrackNo->setChecked(QVariant(strList[index++]).toBool());
+        this->ui->track_no_delimiter->setText(strList[index++]);
+        this->ui->num_of_digit->setValue(strList[index++].toInt());
+    }
 
     int row = 0;
     const int size = strList.size();
@@ -496,7 +637,7 @@ void MainWindow::loadProjectFile(QString projFilePath)
 
                 item->setText(title);
                 QStringList metaDatas = title.split('_');
-                if(metaDatas.size() > 0){
+                if(metaDatas.size() > 1){
                     item->setText(metaDatas[1]);
                 }
                 item->setData(Qt::UserRole, path);
@@ -509,6 +650,8 @@ void MainWindow::loadProjectFile(QString projFilePath)
         }
         row++;
     }
+
+    this->lastLoadProject = projFilePath;
 }
 
 void MainWindow::Encode()
@@ -521,18 +664,16 @@ void MainWindow::Encode()
     this->ui->tabWidget->setCurrentIndex(1);    //ログウィジェットを表示
 
     const QString outputFolder = this->ui->outputFolderPath->text();
-    const bool isExistsqaac = QFile::exists(qaacPath);
-    const bool isExistsLame = QFile::exists(lamePath);
     //出力先フォルダを作成 エンコーダーの有無・出力チェックの状態に応じてフォルダを作成
     QDir().mkdir(outputFolder);
-    if(isExistsqaac || this->ui->outputM4a->isChecked()){ QDir().mkdir(outputFolder+"/m4a"); }
-    if(this->ui->outputWav->isChecked()){ QDir().mkdir(outputFolder+"/wav"); }
-    if(isExistsLame || this->ui->outputMp3->isChecked()){ QDir().mkdir(outputFolder+"/mp3"); }
+    if(this->ui->outputM4a->isChecked()){ QDir().mkdir(outputFolder+"/m4a"); }
+    if(this->ui->outputWav->isChecked()){ QDir().mkdir(outputFolder+"/"+wavOutputPath); }
+    if(this->ui->outputMp3->isChecked()){ QDir().mkdir(outputFolder+"/mp3"); }
     if(this->ui->includeImage->isChecked())
     {
-        QDir().mkdir(outputFolder+"/image");
+        QDir().mkdir(outputFolder+"/"+imageOutputPath);
         //jacketのコピー
-        QFile::copy(this->artworkPath, outputFolder+"/image"+this->artworkPath.mid(this->artworkPath.lastIndexOf("/")));
+        QFile::copy(this->artworkPath, outputFolder+"/"+imageOutputPath+this->artworkPath.mid(this->artworkPath.lastIndexOf("/")));
     }
 
 #if defined(Q_OS_MAC)
@@ -584,11 +725,26 @@ void MainWindow::WindowsEncodeProcess()
     const bool isExistsLame = QFile::exists(lamePath);
     const QString outputFolder = this->ui->outputFolderPath->text();
     const int size = this->ui->tableWidget->rowCount();
-    const int num_encoding_music = [&](){
-        if(isExistsLame && isExistsqaac){ return size*2; }
-        else if(isExistsLame == false && isExistsqaac == false){ return 0; }
-        return size;
+    const int num_encoding_music = [&]()
+    {
+        int result = 0;
+        if(this->ui->outputMp3->isChecked()){
+            result += size;
+        }
+        if(this->ui->outputM4a->isChecked()){
+            result += size;
+        }
+        return result;
     }();
+
+    auto GetOutputPath = [&](QString encodePath, QString title, QString extension, int i) -> QString
+    {
+        QString outputFile = outputFolder+"/"+ encodePath +"/"+title+extension;
+        if(this->ui->check_addTrackNo->isChecked()){
+            outputFile = outputFolder+"/"+ encodePath +"/"+QString("%1%2%3").arg(i+1, this->ui->num_of_digit->value()).arg(this->ui->track_no_delimiter->text()).arg(title)+extension;
+        }
+        return outputFile;
+    };
 
     for(int i=0; i<size; ++i)
     {
@@ -606,14 +762,12 @@ void MainWindow::WindowsEncodeProcess()
         //トラック番号をファイル名に含めるか
 
         if(isExistsqaac == false){
-           this->ui->statusBar->showMessage(tr("Not found %1").arg(StrDefines::qaacEXEFileName), 3000);
+            this->ui->statusBar->showMessage(tr("Not found %1").arg(ProjectDefines::qaacEXEFileName), 3000);
+            this->processed_count++;
         }
         else if(this->ui->outputM4a->isChecked())
         {
-            QString outputFile = outputFolder+"/m4a/"+title+".m4a";
-            if(this->settings->IsAddTrackNoForTitle()){
-                outputFile = outputFolder+"/m4a/"+QString("%1%2%3").arg(i+1, this->settings->GetNumOfDigit()).arg(this->settings->DelimiterForTrackNo()).arg(title)+".m4a";
-            }
+            QString outputFile = GetOutputPath(m4aOutputPath, title, ".m4a", i);
 
             // ======== AAC ========
             QStringList aac_option;
@@ -641,13 +795,11 @@ void MainWindow::WindowsEncodeProcess()
         //トラック番号をファイル名に含めるか
         if(isExistsLame == false){
             this->ui->statusBar->showMessage(tr("Not found lame.exe"), 3000);
+            this->processed_count++;
         }
         else if(this->ui->outputMp3->isChecked())
         {
-            QString outputFile = outputFolder+"/mp3/"+title+".mp3";
-            if(this->settings->IsAddTrackNoForTitle()){
-                outputFile = outputFolder+"/mp3/"+QString("%1%2%3").arg(i+1).arg(this->settings->DelimiterForTrackNo()).arg(title)+".mp3";
-            }
+            QString outputFile = GetOutputPath(mp3OutputPath, title, ".mp3", i);
             QStringList mp3_option;
             mp3_option << " -b " << QString::number(320);
             if(title!=""){ mp3_option << " --tt " << "\"" <<  title <<  "\""; }
@@ -668,10 +820,7 @@ void MainWindow::WindowsEncodeProcess()
         // ======== WAV ========
         if(this->ui->outputWav->isChecked())
         {
-            QString outputFile = outputFolder+"/wav/"+title+".wav";
-            if(this->settings->IsAddTrackNoForTitle()){
-                outputFile = outputFolder+"/wav/"+QString("%1%2%3").arg(i+1).arg(this->settings->DelimiterForTrackNo()).arg(title)+".wav";
-            }
+            QString outputFile = GetOutputPath(wavOutputPath, title, ".wav", i);
             QFile::copy(inputPath, outputFile);
         }
     }
@@ -718,17 +867,17 @@ void MainWindow::MacEncodeProcess()
         }
 
         //AAC
-        QString aac_args = this->settings->GetAACEncodeSetting().arg(path).arg(meta.join(' ')).arg(outputFolder+"/m4a/"+title+".m4a");
+        QString aac_args = this->settings->GetAACEncodeSetting().arg(path).arg(meta.join(' ')).arg(outputFolder+"/"+m4aOutputPath+"/"+title+".m4a");
         QString aac_execute = this->settings->GetFFmpegPath() + " " + aac_args;
         EncodeProcess(aac_execute, title, num_encoding_music);
         this->ui->logWidget->insertPlainText(tr("start aac encoding : %1(%2/%3)\n").arg(title).arg(i+1).arg(num_encoding_music));
 
-        QString mp3_args = this->settings->GetMP3EncodeSetting().arg(path).arg(meta.join(' ')).arg(outputFolder+"/mp3/"+title+".mp3");
+        QString mp3_args = this->settings->GetMP3EncodeSetting().arg(path).arg(meta.join(' ')).arg(outputFolder+"/"+mp3OutputPath+"/"+title+".mp3");
         QString mp3_execute = this->settings->GetFFmpegPath() + " " + mp3_args;
         EncodeProcess(mp3_execute, title, num_encoding_music);
         this->ui->logWidget->insertPlainText(tr("start mp3 encoding : %1(%2/%3)\n").arg(title).arg(i+1).arg(num_encoding_music));
 
-        QFile::copy(path, outputFolder+"/wav/"+title+".wav");
+        QFile::copy(path, outputFolder+"/"+wavOutputPath+"/"+title+".wav");
     }
 }
 

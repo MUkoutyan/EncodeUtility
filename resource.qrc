@@ -2,4 +2,7 @@
     <qresource prefix="/lang">
         <file>language/lang.qm</file>
     </qresource>
+    <qresource prefix="/qss">
+        <file>style/style.qss</file>
+    </qresource>
 </RCC>

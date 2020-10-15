@@ -46,6 +46,9 @@
      </item>
      <item>
       <widget class="QLineEdit" name="m4a_args">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
        <property name="text">
         <string>-y -i ${input} -c:a libfdk_aac -b:a 320k ${metadata} ${output}</string>
        </property>
@@ -64,6 +67,9 @@
      </item>
      <item>
       <widget class="QLineEdit" name="mp3_args">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
        <property name="text">
         <string>-y -i ${input} -c:a libmp3lame -b:a 320k ${metadata} ${output}</string>
        </property>
