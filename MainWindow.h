@@ -21,6 +21,7 @@
 #include <QMainWindow>
 #include <QLabel>
 #include "DialogAppSettings.h"
+#include <QUndoCommand>
 
 namespace Ui {
 class MainWindow;
@@ -55,6 +56,8 @@ private:
     void WindowsEncodeProcess();
     void MacEncodeProcess();
 
+    void CreateBatchEntryWidgets();
+
     Ui::MainWindow *ui;
     MetadataTable* metadataTable;
     QString artworkPath;
@@ -74,6 +77,9 @@ private:
     DialogAppSettings* settings;
     QList<QWidget*> widgetListDisableDuringEncode;
     QString lastLoadProject;
+    QString currentWorkDirectory;
+    QWidget* batchEntryWidget;
+    QStringList batchParameters;
 
 };
 

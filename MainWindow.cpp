@@ -35,14 +35,16 @@
 #include <QMessageBox>
 #include <QDesktopServices>
 #include <QTextStream>
+#include <QPainter>
 
 #include <QDebug>
 
 struct ProjectDefines
 {
+    static constexpr char applicationVersion[] = "Version 1.0.3";
     static constexpr char projectExtention[] = ".encproj";
-    static constexpr int  projectVersionNum  = 0x010001;
-    static constexpr char projectVersion[]   = "1.0.1";
+    static constexpr int  projectVersionNum  = 0x010002;
+    static constexpr char projectVersion[]   = "1.0.2";
     static constexpr char settingOutputFolder[] = "OutputFolder";
     static constexpr char settingCheckQaacFile[] = "CheckqaacFile";
     static constexpr char settingCheckLameFile[] = "CheckLameFile";
@@ -88,10 +90,13 @@ MainWindow::MainWindow(QWidget *parent)
     , settings(new DialogAppSettings(this))
     , widgetListDisableDuringEncode({})
     , lastLoadProject("")
+    , currentWorkDirectory(QStandardPaths::standardLocations(QStandardPaths::DocumentsLocation)[0])
+    , batchEntryWidget(new QWidget(this, Qt::Popup))
 {
     ui->setupUi(this);
+    QApplication::setStyle("fusion");
 
-    auto toolVer = this->ui->menuAbout->addAction("Version 1.0.2");
+    auto toolVer = this->ui->menuAbout->addAction(ProjectDefines::applicationVersion);
     toolVer->setEnabled(false);
     auto projVer = this->ui->menuAbout->addAction(QString("Project Version ") + ProjectDefines::projectVersion);
     projVer->setEnabled(false);
@@ -127,29 +132,46 @@ MainWindow::MainWindow(QWidget *parent)
     this->ui->tabWidget->setHidden(true);   //編集Widgetはこの時点で表示しない
     this->ui->artwork->setVisible(false);
 
+    //一括入力関係
+    batchEntryWidget->hide();
+    batchParameters.resize(ProjectDefines::headerItems.size());
+    this->CreateBatchEntryWidgets();
+    connect(this->ui->batchInputButton, &QToolButton::toggled, this, [this](bool checked)
+    {
+        if(checked){
+            this->ui->gridLayout_3->addWidget(this->batchEntryWidget, 0, 2);
+            this->batchEntryWidget->setFocus();
+            this->batchEntryWidget->show();
+        }
+        else{
+            this->batchEntryWidget->hide();
+            this->ui->tableWidget->setFocus();
+        }
+    });
+
     //メニュー
-    connect(this->ui->actionSave_file, &QAction::triggered, [this]()
+    connect(this->ui->actionSave_file, &QAction::triggered, this, [this]()
     {
         QString savefilePath = this->lastLoadProject;
         if(savefilePath.isEmpty()){
-           savefilePath = QFileDialog::getSaveFileName(this, tr("Save Project File"),QStandardPaths::standardLocations(QStandardPaths::DocumentsLocation)[0],
+           savefilePath = QFileDialog::getSaveFileName(this, tr("Save Project File"),currentWorkDirectory,
                                                              tr("project file(*%1)").arg(ProjectDefines::projectExtention));
         }
         this->SaveProjectFile(savefilePath);
     });
-    connect(this->ui->actionSave_as, &QAction::triggered, [this]()
+    connect(this->ui->actionSave_as, &QAction::triggered, this, [this]()
     {
-        auto savefilePath = QFileDialog::getSaveFileName(this, tr("Save Project File"),QStandardPaths::standardLocations(QStandardPaths::DocumentsLocation)[0],
+        auto savefilePath = QFileDialog::getSaveFileName(this, tr("Save Project File"),currentWorkDirectory,
                                                                tr("project file(*%1)").arg(ProjectDefines::projectExtention));
         this->SaveProjectFile(savefilePath);
     });
 
 
-    connect(this->ui->actionLoad_file, &QAction::triggered, [this]()
+    connect(this->ui->actionLoad_file, &QAction::triggered, this, [this]()
     {
         auto location = this->lastLoadProject;
         if(location.isEmpty()){
-            location = QStandardPaths::standardLocations(QStandardPaths::DocumentsLocation)[0];
+            location = currentWorkDirectory;
         }
         auto openfilePath = QFileDialog::getOpenFileName(this, tr("Open Project File"), location,
                                                                tr("project file(*%1)").arg(ProjectDefines::projectExtention));
@@ -158,32 +180,32 @@ MainWindow::MainWindow(QWidget *parent)
     });
 
     //出力先の取得と表示
-    connect(this->ui->outputFolderPath, &QLineEdit::textChanged, [this](QString path){
+    connect(this->ui->outputFolderPath, &QLineEdit::textChanged, this, [this](QString path){
         this->ui->baseFolder1->setText(path+"/");
         this->ui->baseFolder2->setText(path+"/");
         this->ui->baseFolder3->setText(path+"/");
         this->ui->baseFolder4->setText(path+"/");
     });
-    auto filePathList = QStandardPaths::standardLocations(QStandardPaths::DocumentsLocation);
-    QString homeDir = filePathList[0];
-    this->ui->outputFolderPath->setText(homeDir+"/EncodeUtilityFolder");
+    this->ui->outputFolderPath->setText(currentWorkDirectory+"/EncodeUtilityFolder");
 
     //メタデータが編集された
-    connect(this->ui->tableWidget, &QTableWidget::itemChanged, [this](QTableWidgetItem* item)
+    connect(this->ui->tableWidget, &QTableWidget::itemChanged, this, [this](QTableWidgetItem* item)
     {
         //選択されている箇所を全て変更する
         auto items = this->ui->tableWidget->selectedItems();
-        for(QTableWidgetItem* selectItem : items)
-        {
+        for(QTableWidgetItem* selectItem : items){
             selectItem->setData(Qt::DisplayRole, item->data(Qt::DisplayRole));
         }
     });
 
     connect(this->ui->encodeButton, &QPushButton::clicked, this, &MainWindow::Encode);
 
-    connect(this->ui->expandOption, &QPushButton::clicked, [this]()
+    connect(this->ui->expandOption, &QPushButton::clicked, this, [this]()
     {
         auto ChangeVisible = [](QWidget* w){ w->setVisible(!w->isVisible()); };
+        ChangeVisible(this->ui->label_4);
+        ChangeVisible(this->ui->filenameDelimiter);
+
         ChangeVisible(this->ui->outputMp3);
         ChangeVisible(this->ui->baseFolder1);
         ChangeVisible(this->ui->mp3OutputPath);
@@ -200,71 +222,77 @@ MainWindow::MainWindow(QWidget *parent)
         ChangeVisible(this->ui->baseFolder4);
         ChangeVisible(this->ui->imageOutputPath);
 
-        ChangeVisible(this->ui->check_addTrackNo);
-        ChangeVisible(this->ui->label_2);
-        ChangeVisible(this->ui->track_no_delimiter);
-        ChangeVisible(this->ui->label_3);
-        ChangeVisible(this->ui->num_of_digit);
+        ChangeVisible(this->ui->option_addTrackNo);
     });
 
-    connect(this->ui->m4aOutputPath, &QLineEdit::textEdited, [this](QString text){
+    connect(this->ui->m4aOutputPath, &QLineEdit::textEdited, this, [this](QString text){
         this->m4aOutputPath = std::move(text);
     });
-    connect(this->ui->mp3OutputPath, &QLineEdit::textEdited, [this](QString text){
+    connect(this->ui->mp3OutputPath, &QLineEdit::textEdited, this, [this](QString text){
         this->mp3OutputPath = std::move(text);
     });
-    connect(this->ui->wavOutputPath, &QLineEdit::textEdited, [this](QString text){
+    connect(this->ui->wavOutputPath, &QLineEdit::textEdited, this, [this](QString text){
         this->wavOutputPath = std::move(text);
     });
-    connect(this->ui->imageOutputPath, &QLineEdit::textEdited, [this](QString text){
+    connect(this->ui->imageOutputPath, &QLineEdit::textEdited, this, [this](QString text){
         this->imageOutputPath = std::move(text);
     });
-    this->ui->m4aOutputPath->setText(this->m4aOutputPath);
-    this->ui->mp3OutputPath->setText(this->mp3OutputPath);
-    this->ui->wavOutputPath->setText(this->wavOutputPath);
-    this->ui->imageOutputPath->setText(this->imageOutputPath);
 
-    connect(this->ui->outputM4a,    &QCheckBox::clicked, [this](bool checked){
+    this->ui->mp3OutputPath->setText(this->mp3OutputPath);
+    this->ui->mp3OutputPath->setEnabled(this->ui->outputMp3->isChecked());
+    this->ui->baseFolder1->setEnabled(this->ui->outputMp3->isChecked());
+
+    this->ui->m4aOutputPath->setText(this->m4aOutputPath);
+    this->ui->m4aOutputPath->setEnabled(this->ui->outputM4a->isChecked());
+    this->ui->baseFolder2->setEnabled(this->ui->outputM4a->isChecked());
+
+    this->ui->wavOutputPath->setText(this->wavOutputPath);
+    this->ui->wavOutputPath->setEnabled(this->ui->outputWav->isChecked());
+
+    this->ui->imageOutputPath->setText(this->imageOutputPath);
+    this->ui->imageOutputPath->setEnabled(this->ui->includeImage->isChecked());
+
+    connect(this->ui->outputM4a,    &QCheckBox::clicked, this, [this](bool checked){
         this->CheckEnableEncodeButton();
         this->ui->baseFolder2->setEnabled(checked);
         this->ui->m4aOutputPath->setEnabled(checked);
     });
-    connect(this->ui->outputMp3,    &QCheckBox::clicked, [this](bool checked){
+    connect(this->ui->outputMp3,    &QCheckBox::clicked, this, [this](bool checked){
         this->CheckEnableEncodeButton();
         this->ui->baseFolder1->setEnabled(checked);
         this->ui->mp3OutputPath->setEnabled(checked);
     });
-    connect(this->ui->outputWav,    &QCheckBox::clicked, [this](bool checked){
+    connect(this->ui->outputWav,    &QCheckBox::clicked, this, [this](bool checked){
         this->CheckEnableEncodeButton();
         this->ui->baseFolder3->setEnabled(checked);
         this->ui->wavOutputPath->setEnabled(checked);
     });
-    connect(this->ui->includeImage, &QCheckBox::clicked, [this](bool checked){
+    connect(this->ui->includeImage, &QCheckBox::clicked, this, [this](bool checked){
         this->CheckEnableEncodeButton();
         this->ui->baseFolder4->setEnabled(checked);
         this->ui->imageOutputPath->setEnabled(checked);
     });
 
-    connect(this->ui->selectFolder, &QToolButton::clicked, [this]()
+    connect(this->ui->selectFolder, &QToolButton::clicked, this, [this]()
     {
         QString dir = QFileDialog::getExistingDirectory(this, tr("Open Directory"),
                                                      this->ui->outputFolderPath->text(),
                                                      QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
         this->ui->outputFolderPath->setText(dir);
     });
-    connect(this->ui->openFolder, &QToolButton::clicked, [this](){
+    connect(this->ui->openFolder, &QToolButton::clicked, this, [this](){
         QDesktopServices::openUrl(QUrl(this->ui->outputFolderPath->text()));
     });
 
     QAction* delete_artwork_action = this->artworkMenu->addAction(tr("Delete Artwork"));
     this->ui->artwork->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(this->ui->artwork, &QLabel::customContextMenuRequested, [this, delete_artwork_action](const QPoint&)
+    connect(this->ui->artwork, &QLabel::customContextMenuRequested, this, [this, delete_artwork_action](const QPoint&)
     {
         //選択しているアイテムが無ければメニューを無効
         delete_artwork_action->setEnabled(this->artworkPath != "");
         this->artworkMenu->exec(QCursor::pos());
     });
-    connect(delete_artwork_action, &QAction::triggered, [this]()
+    connect(delete_artwork_action, &QAction::triggered, this, [this]()
     {
         this->artworkPath = "";
         this->ui->artwork->setPixmap(QPixmap());
@@ -274,13 +302,13 @@ MainWindow::MainWindow(QWidget *parent)
     //セルクリック時の右クリックメニュー
     QAction* delete_row_action = this->tableMenu->addAction(tr("Delete Row"));
     this->ui->tableWidget->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(this->ui->tableWidget, &QTableWidget::customContextMenuRequested, [this, delete_row_action](const QPoint&)
+    connect(this->ui->tableWidget, &QTableWidget::customContextMenuRequested, this, [this, delete_row_action](const QPoint&)
     {
         //選択しているアイテムが無ければメニューを無効
         delete_row_action->setEnabled(this->ui->tableWidget->selectedItems().size() > 0);
         this->tableMenu->exec(QCursor::pos());
     });
-    connect(delete_row_action, &QAction::triggered, [this]()
+    connect(delete_row_action, &QAction::triggered, this, [this]()
     {
         auto items = this->ui->tableWidget->selectedItems();
         for(QTableWidgetItem* selectItem : items){
@@ -288,7 +316,7 @@ MainWindow::MainWindow(QWidget *parent)
         }
     });
 
-    connect(this->ui->actionClear_All_Items, &QAction::triggered, [this]()
+    connect(this->ui->actionClear_All_Items, &QAction::triggered, this, [this]()
     {
         int size = this->ui->tableWidget->rowCount();
         for(int row=0; row<size; ++row){
@@ -296,12 +324,12 @@ MainWindow::MainWindow(QWidget *parent)
         }
     });
 
-    connect(this->ui->actionSettings, &QAction::triggered, [this](){
+    connect(this->ui->actionSettings, &QAction::triggered, this, [this](){
         this->settings->show();
         this->settings->raise();
     });
 
-    connect(this->ui->actionCheck_Encoder, &QAction::triggered, [this](){
+    connect(this->ui->actionCheck_Encoder, &QAction::triggered, this, [this](){
         if(this->CheckEncoder()){
             //エンコーダーを正しく認識しています。
             QMessageBox::information(this, tr("Check Encoder"), tr("The encoder is correctly identified."));
@@ -401,6 +429,66 @@ bool MainWindow::CheckEncoder()
     return existsLame && existsQaac;
 }
 
+void MainWindow::CreateBatchEntryWidgets()
+{
+    auto* vLayout = new QVBoxLayout();
+
+    QLineEdit* firstLineEdit = nullptr;
+    QLineEdit* beforeLineEdit = nullptr;
+    for(int i=1; i<ProjectDefines::headerItems.size(); ++i)
+    {
+        const auto& h = ProjectDefines::headerItems[i];
+        auto* hLayout = new QHBoxLayout();
+        auto* label = new QLabel(h);
+        label->setMinimumWidth(120);
+
+        auto* text = new QLineEdit(batchParameters[i-1]);
+        connect(text, &QLineEdit::textEdited, this, [this, i](const QString& t){
+            this->batchParameters[i-1] = t;
+            this->batchEntryWidget->nextInFocusChain();
+        });
+
+        if(beforeLineEdit){
+            this->batchEntryWidget->setTabOrder(beforeLineEdit, text);
+        }
+        else{
+            firstLineEdit = text;
+        }
+        beforeLineEdit = text;
+
+        text->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        hLayout->addWidget(label);
+        hLayout->addWidget(text);
+        vLayout->addLayout(hLayout);
+    }
+    this->batchEntryWidget->setTabOrder(beforeLineEdit, firstLineEdit);
+
+    auto buttonLayout = new QHBoxLayout();
+    auto spacer = new QSpacerItem(1,1,QSizePolicy::Minimum, QSizePolicy::Expanding);
+    auto applyButton = new QPushButton(tr("Apply"));
+    buttonLayout->addItem(spacer);
+    buttonLayout->addWidget(applyButton);
+
+    connect(applyButton, &QPushButton::clicked, this, [this]()
+    {
+        int row = this->ui->tableWidget->rowCount();
+        for(int i=1; i<ProjectDefines::headerItems.size(); ++i)
+        {
+            const auto& text = this->batchParameters[i-1];
+            if(text.isEmpty()){ continue; }
+            for(int r=0; r<row; ++r)
+            {
+                auto* item = new QTableWidgetItem(text);
+                this->ui->tableWidget->setItem(r, i, item);
+            }
+        }
+    });
+
+    vLayout->addLayout(buttonLayout);
+
+    batchEntryWidget->setLayout(vLayout);
+}
+
 MainWindow::~MainWindow()
 {
     delete ui;
@@ -415,7 +503,7 @@ void MainWindow::dropEvent(QDropEvent *event)
         QStringList pathList;
         QList<QUrl> urlList = mimeData->urls();
 
-        for (QUrl url : urlList){
+        for (const QUrl& url : urlList){
             pathList.append(url.toLocalFile());
         }
         openFiles(pathList);
@@ -442,7 +530,7 @@ void MainWindow::openFiles(QStringList pathList)
 
         if(extension == "ENCPROJ"){
             this->loadProjectFile(std::move(path));
-            break;
+            break;  //プロジェクトファイル読み込みは別関数に任せるのでbreak
         }
 
         if(extension == "PNG" || extension == "JPG")
@@ -456,14 +544,14 @@ void MainWindow::openFiles(QStringList pathList)
 
         if(extension != "WAV"){ continue; }
 
-        QString track_no = QString("%1").arg(row);
+        QString track_no = QString("%1").arg(row+1);    //iTunesが1開始なので準拠させる
         QString title = path.mid(path.lastIndexOf("/")+1).section(".", 0, 0);
         QString albumTitle = "";
         QString artist = "";
         QString genre = "";
 
         //区切り文字で分けられればメタデータをファイル名から取得
-        QStringList metaDatas = title.split('_');
+        QStringList metaDatas = title.split(this->ui->filenameDelimiter->text());
         const int size = metaDatas.size();
         if(size > 0)
         {
@@ -472,12 +560,16 @@ void MainWindow::openFiles(QStringList pathList)
             {
             case TableColumn::Genre:
                 genre = metaDatas[4];
+                [[fallthrough]];
             case TableColumn::AlbumTitle:
                 albumTitle = metaDatas[3];
+                [[fallthrough]];
             case TableColumn::Artist:
                 artist = metaDatas[2];
+                [[fallthrough]];
             case TableColumn::Title:
                 title = metaDatas[1];
+                [[fallthrough]];
             case TableColumn::TrackNo:
             {
                 QString buf = metaDatas[0];
@@ -518,20 +610,26 @@ void MainWindow::openFiles(QStringList pathList)
         this->ui->encodeButton->setEnabled(true);
         this->ui->actionSave_as->setEnabled(true);
         this->ui->actionSave_file->setEnabled(true);
+        this->ui->batchInputButton->setEnabled(true);
     }
 }
 
 void MainWindow::SaveProjectFile(QString saveFilePath)
 {
+    // ### Ver.1.0.0
     // project version
     // output path
     // image path
 
-    // ### Ver.1.0.2
+    // ### Ver.1.0.1
     // addTrackNo Flag
     // delimiter
     // fill digit
 
+    // ### Ver.1.0.2
+    // filenameDelimiter
+
+    // ### Common
     // no., title, artist, albumtitle...
     // no., title, artist, albumtitle...
     if(saveFilePath.isEmpty()){ return; }
@@ -541,9 +639,13 @@ void MainWindow::SaveProjectFile(QString saveFilePath)
     tableList.append(this->ui->outputFolderPath->text());
     tableList.append(this->artworkPath);
 
+    // ### Ver.1.0.1
     tableList.append(QVariant(this->ui->check_addTrackNo->isChecked()).toString());
     tableList.append(this->ui->track_no_delimiter->text());
     tableList.append(QString::number(this->ui->num_of_digit->value()));
+
+    // ### Ver.1.0.2
+    tableList.append(this->ui->filenameDelimiter->text());
 
     const int row = this->ui->tableWidget->rowCount();
     const int col = this->ui->tableWidget->columnCount();
@@ -601,6 +703,8 @@ void MainWindow::loadProjectFile(QString projFilePath)
     QFile file(projFilePath);
     if(file.open(QFile::ReadOnly) == false){ return; }
 
+    currentWorkDirectory = QFileInfo(projFilePath).absoluteDir().absolutePath();
+
     this->ui->tableWidget->clear();
     this->ui->tableWidget->setRowCount(0);
     this->ui->outputFolderPath->setText("");
@@ -614,12 +718,19 @@ void MainWindow::loadProjectFile(QString projFilePath)
     int index = 0;
     auto projVersion = strList[index++].toInt();
     this->ui->outputFolderPath->setText(strList[index++]);
+
     this->artworkPath = strList[index++];
+    QPixmap artwork = QPixmap(this->artworkPath);
+    this->ui->artwork->setVisible(true);
+    this->ui->artwork->setPixmap(artwork.scaled(128, 128, Qt::KeepAspectRatio, Qt::SmoothTransformation));
 
     if(0x010001 <= projVersion){
         this->ui->check_addTrackNo->setChecked(QVariant(strList[index++]).toBool());
         this->ui->track_no_delimiter->setText(strList[index++]);
         this->ui->num_of_digit->setValue(strList[index++].toInt());
+    }
+    if(0x010002 <= projVersion){
+        this->ui->filenameDelimiter->setText(strList[index++]);
     }
 
     int row = 0;
@@ -650,6 +761,8 @@ void MainWindow::loadProjectFile(QString projFilePath)
         }
         row++;
     }
+
+    this->ui->batchInputButton->setEnabled(true);
 
     this->lastLoadProject = projFilePath;
 }
@@ -686,16 +799,16 @@ void MainWindow::Encode()
 void MainWindow::EncodeProcess(QString execute, QString title, int num_encoding_music)
 {
     QProcess* process = new QProcess(this);
-    connect(process, &QProcess::readyReadStandardOutput, [=](){
+    connect(process, &QProcess::readyReadStandardOutput, this, [this, process](){
         QByteArray arr = process->readAllStandardOutput();
         this->ui->logWidget->insertPlainText(QString(arr));
     });
-    connect(process, &QProcess::readyReadStandardError, [=](){
+    connect(process, &QProcess::readyReadStandardError, this, [this, process](){
         QByteArray arr = process->readAllStandardError();
         this->ui->logWidget->insertPlainText(QString(arr));
         this->ui->logWidget->verticalScrollBar()->setValue(this->ui->logWidget->verticalScrollBar()->maximum());
     });
-    connect(process, &QProcess::readChannelFinished, [=]()
+    connect(process, &QProcess::readChannelFinished, this, [this, title, num_encoding_music]()
     {
         this->processed_count++;
 
@@ -880,4 +993,3 @@ void MainWindow::MacEncodeProcess()
         QFile::copy(path, outputFolder+"/"+wavOutputPath+"/"+title+".wav");
     }
 }
-
