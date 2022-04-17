@@ -67,186 +67,201 @@
         <translation></translation>
     </message>
     <message>
-        <location filename="../MainWindow.ui" line="307"/>
+        <location filename="../MainWindow.ui" line="87"/>
         <source>Option▼</source>
         <translation>オプション▼</translation>
     </message>
     <message>
-        <location filename="../MainWindow.ui" line="470"/>
+        <location filename="../MainWindow.ui" line="139"/>
         <source>Encode</source>
         <translation>エンコード</translation>
     </message>
     <message>
-        <location filename="../MainWindow.ui" line="247"/>
+        <location filename="../MainWindow.ui" line="366"/>
         <source>output folder</source>
         <translation>出力フォルダ</translation>
     </message>
     <message>
-        <location filename="../MainWindow.ui" line="269"/>
+        <location filename="../MainWindow.ui" line="388"/>
         <source>select</source>
         <translation>選択</translation>
     </message>
     <message>
-        <location filename="../MainWindow.ui" line="288"/>
+        <location filename="../MainWindow.ui" line="407"/>
         <source>open</source>
         <translation>開く</translation>
     </message>
     <message>
-        <location filename="../MainWindow.ui" line="158"/>
+        <location filename="../MainWindow.ui" line="478"/>
         <source>Meta</source>
         <translation>メタ</translation>
     </message>
     <message>
-        <location filename="../MainWindow.ui" line="51"/>
+        <location filename="../MainWindow.ui" line="268"/>
         <source>Add track No. for encoded audio file</source>
         <translation>エンコードしたオーディオファイルにトラック番号を付ける</translation>
     </message>
     <message>
-        <location filename="../MainWindow.ui" line="74"/>
+        <location filename="../MainWindow.ui" line="35"/>
+        <source>Input Filename Delimiter</source>
+        <translation>入力ファイル名の区切り文字</translation>
+    </message>
+    <message>
+        <location filename="../MainWindow.ui" line="54"/>
+        <source>_</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="../MainWindow.ui" line="291"/>
         <source>Delimiter</source>
         <translation>区切り文字</translation>
     </message>
     <message>
-        <location filename="../MainWindow.ui" line="103"/>
+        <location filename="../MainWindow.ui" line="320"/>
         <source>Number of digits</source>
         <translation>桁数</translation>
     </message>
     <message>
-        <location filename="../MainWindow.ui" line="177"/>
+        <location filename="../MainWindow.ui" line="448"/>
+        <source>Batch Input</source>
+        <translation>一括入力</translation>
+    </message>
+    <message>
+        <location filename="../MainWindow.ui" line="497"/>
         <source>No.</source>
         <translation>番号</translation>
     </message>
     <message>
-        <location filename="../MainWindow.ui" line="182"/>
+        <location filename="../MainWindow.ui" line="502"/>
         <source>Title</source>
         <translation>タイトル</translation>
     </message>
     <message>
-        <location filename="../MainWindow.ui" line="187"/>
+        <location filename="../MainWindow.ui" line="507"/>
         <source>Artist</source>
         <translation>アーティスト</translation>
     </message>
     <message>
-        <location filename="../MainWindow.ui" line="192"/>
+        <location filename="../MainWindow.ui" line="512"/>
         <source>AlbumTitle</source>
         <translation>アルバムタイトル</translation>
     </message>
     <message>
-        <location filename="../MainWindow.ui" line="197"/>
+        <location filename="../MainWindow.ui" line="517"/>
         <source>AlbumArtist</source>
         <translation>アルバムアーティスト</translation>
     </message>
     <message>
-        <location filename="../MainWindow.ui" line="202"/>
+        <location filename="../MainWindow.ui" line="522"/>
         <source>Composer</source>
         <translation>作曲者</translation>
     </message>
     <message>
-        <location filename="../MainWindow.ui" line="207"/>
+        <location filename="../MainWindow.ui" line="527"/>
         <source>Group</source>
         <translation>グループ</translation>
     </message>
     <message>
-        <location filename="../MainWindow.ui" line="212"/>
+        <location filename="../MainWindow.ui" line="532"/>
         <source>Genre</source>
         <translation>ジャンル</translation>
     </message>
     <message>
-        <location filename="../MainWindow.ui" line="217"/>
+        <location filename="../MainWindow.ui" line="537"/>
         <source>Year</source>
         <translation>年</translation>
     </message>
     <message>
-        <location filename="../MainWindow.ui" line="226"/>
+        <location filename="../MainWindow.ui" line="565"/>
         <source>Log</source>
         <translation>ログ</translation>
     </message>
     <message>
-        <location filename="../MainWindow.ui" line="379"/>
-        <location filename="../MainWindow.ui" line="386"/>
-        <location filename="../MainWindow.ui" line="396"/>
-        <location filename="../MainWindow.ui" line="436"/>
+        <location filename="../MainWindow.ui" line="168"/>
+        <location filename="../MainWindow.ui" line="175"/>
+        <location filename="../MainWindow.ui" line="185"/>
+        <location filename="../MainWindow.ui" line="225"/>
         <source>TextLabel</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../MainWindow.ui" line="443"/>
+        <location filename="../MainWindow.ui" line="232"/>
         <source>output m4a</source>
         <translation>m4aを出力</translation>
     </message>
     <message>
-        <location filename="../MainWindow.ui" line="534"/>
+        <location filename="../MainWindow.ui" line="641"/>
         <source>Save</source>
         <translation>保存</translation>
     </message>
     <message>
-        <location filename="../MainWindow.ui" line="537"/>
+        <location filename="../MainWindow.ui" line="644"/>
         <source>Ctrl+S</source>
         <translation>Ctrl+S</translation>
     </message>
     <message>
-        <location filename="../MainWindow.ui" line="542"/>
+        <location filename="../MainWindow.ui" line="649"/>
         <source>Load project file...</source>
         <translation>プロジェクトファイルを読み込む...</translation>
     </message>
     <message>
-        <location filename="../MainWindow.ui" line="545"/>
+        <location filename="../MainWindow.ui" line="652"/>
         <source>Ctrl+O</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../MainWindow.ui" line="550"/>
-        <location filename="../MainWindow.cpp" line="307"/>
+        <location filename="../MainWindow.ui" line="657"/>
+        <location filename="../MainWindow.cpp" line="335"/>
         <source>Check Encoder</source>
         <translation>エンコーダーをチェック</translation>
     </message>
     <message>
-        <location filename="../MainWindow.ui" line="558"/>
+        <location filename="../MainWindow.ui" line="665"/>
         <source>Save as...</source>
         <translation>名前を付けて保存...</translation>
     </message>
     <message>
-        <location filename="../MainWindow.ui" line="561"/>
+        <location filename="../MainWindow.ui" line="668"/>
         <source>Ctrl+Shift+S</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../MainWindow.ui" line="426"/>
+        <location filename="../MainWindow.ui" line="215"/>
         <source>output mp3</source>
         <translation>mp3を出力</translation>
     </message>
     <message>
-        <location filename="../MainWindow.ui" line="406"/>
+        <location filename="../MainWindow.ui" line="195"/>
         <source>output wav</source>
         <translation>wavを出力</translation>
     </message>
     <message>
-        <location filename="../MainWindow.ui" line="359"/>
+        <location filename="../MainWindow.ui" line="148"/>
         <source>include image</source>
         <translation>画像を含める</translation>
     </message>
     <message>
-        <location filename="../MainWindow.ui" line="487"/>
+        <location filename="../MainWindow.ui" line="594"/>
         <source>Edit</source>
         <translation>編集</translation>
     </message>
     <message>
-        <location filename="../MainWindow.ui" line="495"/>
+        <location filename="../MainWindow.ui" line="602"/>
         <source>File</source>
         <translation>ファイル</translation>
     </message>
     <message>
-        <location filename="../MainWindow.ui" line="505"/>
+        <location filename="../MainWindow.ui" line="612"/>
         <source>About</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../MainWindow.ui" line="515"/>
+        <location filename="../MainWindow.ui" line="622"/>
         <source>Clear All Items</source>
         <translation>全てのアイテムをクリア</translation>
     </message>
     <message>
-        <location filename="../MainWindow.ui" line="523"/>
+        <location filename="../MainWindow.ui" line="630"/>
         <source>Settings...</source>
         <translation>設定...</translation>
     </message>
@@ -263,101 +278,106 @@
         <translation type="vanished">設定...</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="77"/>
+        <location filename="../MainWindow.cpp" line="79"/>
         <source>drag&amp;drop .wav files 
  or 
  jacket(.png or .jpg) file here.</source>
-        <translation>.wavファイルをドラッグ &amp; ドロップ
-又は
-ジャケットファイル(.png か .jpg)をドラッグ &amp; ドロップ。</translation>
+        <translation>.wavファイルをドラッグ &amp; ドロップ 
+ 又は 
+ ジャケットファイル(.png か .jpg)をドラッグ &amp; ドロップ。</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="154"/>
+        <location filename="../MainWindow.cpp" line="176"/>
         <source>Open Project File</source>
         <translation>プロジェクトファイルを開く</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="136"/>
-        <location filename="../MainWindow.cpp" line="143"/>
-        <location filename="../MainWindow.cpp" line="155"/>
+        <location filename="../MainWindow.cpp" line="158"/>
+        <location filename="../MainWindow.cpp" line="165"/>
+        <location filename="../MainWindow.cpp" line="177"/>
         <source>project file(*%1)</source>
         <translation>プロジェクトファイル(*%1)</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="250"/>
+        <location filename="../MainWindow.cpp" line="278"/>
         <source>Open Directory</source>
         <translation>ディレクトリを開く</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="259"/>
+        <location filename="../MainWindow.cpp" line="287"/>
         <source>Delete Artwork</source>
         <translation>アートワークを削除</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="275"/>
+        <location filename="../MainWindow.cpp" line="303"/>
         <source>Delete Row</source>
         <translation>この行を削除</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="307"/>
+        <location filename="../MainWindow.cpp" line="335"/>
         <source>The encoder is correctly identified.</source>
         <translation>エンコーダーを正しく認識しています。</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="333"/>
-        <location filename="../MainWindow.cpp" line="370"/>
+        <location filename="../MainWindow.cpp" line="361"/>
+        <location filename="../MainWindow.cpp" line="398"/>
         <source>Don&apos;t show again.</source>
         <translation>今後表示しない。</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="339"/>
+        <location filename="../MainWindow.cpp" line="367"/>
         <source>Not found Lame</source>
         <translation>Lameが見つかりません</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="340"/>
+        <location filename="../MainWindow.cpp" line="368"/>
         <source>Lame is required for mp3 encoding. Do you want to open a download link?</source>
         <translation>mp3エンコードにはLameが必要です。 ダウンロードリンクを開きますか？</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="352"/>
+        <location filename="../MainWindow.cpp" line="380"/>
         <source>Place &quot;lame.exe&quot; and &quot;lame_enc.dll&quot; in the same location as EncodeUtility.exe.</source>
         <translation>EncodeUtility.exeと同じ場所に&quot;lame.exe&quot;と&quot;lame_enc.dll&quot;を置いて下さい。</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="355"/>
-        <location filename="../MainWindow.cpp" line="392"/>
+        <location filename="../MainWindow.cpp" line="383"/>
+        <location filename="../MainWindow.cpp" line="420"/>
         <source>Can&apos;t open URL</source>
         <translation>URLを開くことが出来ません</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="355"/>
-        <location filename="../MainWindow.cpp" line="392"/>
+        <location filename="../MainWindow.cpp" line="383"/>
+        <location filename="../MainWindow.cpp" line="420"/>
         <source>Can&apos;t open URL. </source>
-        <translation>URLを開くことが出来ません。</translation>
+        <translation>URLを開くことが出来ません。 </translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="376"/>
+        <location filename="../MainWindow.cpp" line="404"/>
         <source>Not found qaac</source>
         <translation>qaacが見つかりません</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="377"/>
+        <location filename="../MainWindow.cpp" line="405"/>
         <source>qaac is required for m4a encoding. Do you want to open a download link?</source>
         <translation>m4aエンコードにはqaacが必要です。 ダウンロードリンクを開きますか？</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="389"/>
+        <location filename="../MainWindow.cpp" line="417"/>
         <source>Place &quot;libsoxconvolver64.dll&quot;, &quot;libsoxr64.dll&quot; and &quot;%1&quot;in the same location as EncodeUtility.exe.</source>
         <translation>EncodeUtility.exeと同じ場所に&quot;libsoxconvolver64.dll&quot;,&quot;libsoxr64.dll&quot;,&quot;%1&quot;,を置いて下さい。</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="569"/>
+        <location filename="../MainWindow.cpp" line="468"/>
+        <source>Apply</source>
+        <translation>適用</translation>
+    </message>
+    <message>
+        <location filename="../MainWindow.cpp" line="671"/>
         <source>File saved.</source>
         <translation>ファイルを保存しました。</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="765"/>
+        <location filename="../MainWindow.cpp" line="878"/>
         <source>Not found %1</source>
         <translation>%1が見つかりません</translation>
     </message>
@@ -366,13 +386,13 @@
         <translation type="vanished">EncodeUtility.exeと同じ場所に&quot;libsoxconvolver64.dll&quot;,&quot;libsoxr64.dll&quot;,&quot;qaac64.exe&quot;, &quot;refalac64.exe&quot;を置いて下さい。</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="135"/>
-        <location filename="../MainWindow.cpp" line="142"/>
+        <location filename="../MainWindow.cpp" line="157"/>
+        <location filename="../MainWindow.cpp" line="164"/>
         <source>Save Project File</source>
         <translation>プロジェクトファイルを保存</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="659"/>
+        <location filename="../MainWindow.cpp" line="772"/>
         <source>Start Encoding.</source>
         <translation>エンコードを開始。</translation>
     </message>
@@ -385,13 +405,13 @@
         <translation type="vanished">%1の中には既にファイルが含まれています。Yesを押すとフォルダの中身を全て削除します。</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="702"/>
+        <location filename="../MainWindow.cpp" line="815"/>
         <source>Finish Encoding. %1/%2</source>
         <translation>エンコードが完了しました。 %1/%2</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="708"/>
-        <location filename="../MainWindow.cpp" line="709"/>
+        <location filename="../MainWindow.cpp" line="821"/>
+        <location filename="../MainWindow.cpp" line="822"/>
         <source>Complete.</source>
         <translation>完了。</translation>
     </message>
@@ -400,23 +420,25 @@
         <translation type="vanished">qaacが見つかりません</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="791"/>
-        <location filename="../MainWindow.cpp" line="873"/>
+        <location filename="../MainWindow.cpp" line="904"/>
+        <location filename="../MainWindow.cpp" line="986"/>
         <source>start aac encoding : %1(%2/%3)
 </source>
-        <translation>m4aエンコードを開始します %1(%2/%3)</translation>
+        <translation>m4aエンコードを開始します %1(%2/%3)
+</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="797"/>
+        <location filename="../MainWindow.cpp" line="910"/>
         <source>Not found lame.exe</source>
         <translation>Lameが見つかりません</translation>
     </message>
     <message>
-        <location filename="../MainWindow.cpp" line="818"/>
-        <location filename="../MainWindow.cpp" line="878"/>
+        <location filename="../MainWindow.cpp" line="931"/>
+        <location filename="../MainWindow.cpp" line="991"/>
         <source>start mp3 encoding : %1(%2/%3)
 </source>
-        <translation>mp3エンコードを開始します %1(%2/%3)</translation>
+        <translation>mp3エンコードを開始します %1(%2/%3)
+</translation>
     </message>
 </context>
 <context>
