@@ -89,8 +89,21 @@ protected:
     }
 
     inline QString EncloseDQ(QString str) const{
-//        return "\"" + str + "\"";
         return str;
+    }
+
+    void AppendCommonMetaDataOption(QStringList& options, const AudioMetaData& metaData)
+    {
+        // メタデータオプションの追加
+        if(!metaData.title.isEmpty()){ options << "-metadata" << "title=" + EncloseDQ(metaData.title); }
+        if(!metaData.artist.isEmpty()){ options << "-metadata" << "artist=" + EncloseDQ(metaData.artist); }
+        if(!metaData.albumTitle.isEmpty()){ options << "-metadata" << "album=" + EncloseDQ(metaData.albumTitle); }
+        if(!metaData.albumArtist.isEmpty()){ options << "-metadata" << "band=" + EncloseDQ(metaData.albumArtist); }
+        if(!metaData.composer.isEmpty()){ options << "-metadata" << "composer=" + EncloseDQ(metaData.composer); }
+        if(!metaData.genre.isEmpty()){ options << "-metadata" << "genre=" + EncloseDQ(metaData.genre); }
+        if(!metaData.year.isEmpty()){ options << "-metadata" << "date=" + EncloseDQ(metaData.year); }
+        options << "-metadata" << "track=" + EncloseDQ(metaData.track_no + "/" + QString::number(numEncodingMusic));
+        options << "-metadata" << "disc=1/1";
     }
 
     bool isAddTrackNo;
