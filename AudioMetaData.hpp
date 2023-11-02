@@ -1,16 +1,21 @@
 ﻿#ifndef AUDIOMETADATA_HPP
 #define AUDIOMETADATA_HPP
 
-#include <string>
+#include <QString>
 #include <vector>
 
 struct AudioMetaData
 {
-    std::string track_no;
-    std::string title;
-    std::string albumTitle;
-    std::string artist;
-    std::string genre;
+    QString title;
+    QString track_no;
+    QString artist;
+    QString albumTitle;
+    QString albumArtist;
+    QString genre;
+    QString group;
+    QString composer;
+    QString year;
+    QString artworkPath;
 };
 
 struct ProjectMetaData

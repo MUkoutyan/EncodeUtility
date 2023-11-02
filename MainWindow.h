@@ -22,6 +22,9 @@
 #include <QLabel>
 #include "DialogAppSettings.h"
 #include <QUndoCommand>
+#include "Encoder/AACEncoder.h"
+#include "Encoder/MP3Encoder.h"
+#include "Encoder/FlacEncoder.h"
 
 namespace Ui {
 class MainWindow;
@@ -49,12 +52,12 @@ public slots:
     void CheckEnableEncodeButton();
 
 private:
+    void showEvent(QShowEvent* e) override;
+
     void SaveSettingFile(QString key, QVariant value);
     void LoadSettingFile();
     bool CheckEncoder();
-    void EncodeProcess(QString execute, QString title, int num_encoding_music);
     void WindowsEncodeProcess();
-    void MacEncodeProcess();
 
     void CreateBatchEntryWidgets();
 
@@ -64,22 +67,24 @@ private:
     QLabel* aboutLabel;
     QMenu* tableMenu;
     QMenu* artworkMenu;
-    QString settingFilePath;
-    QString qaacPath;
-    QString lamePath;
-    QString mp3OutputPath;
-    QString m4aOutputPath;
     QString wavOutputPath;
     QString imageOutputPath;
-    int processed_count;
-    bool checkQaacFile;
-    bool checkLameFile;
+    int processedCount;
+    int numEncodingMusic;
+    int numEncodingFile;
     DialogAppSettings* settings;
     QList<QWidget*> widgetListDisableDuringEncode;
     QString lastLoadProject;
     QString currentWorkDirectory;
     QWidget* batchEntryWidget;
     QStringList batchParameters;
+
+    bool checkFFmgepFile;
+    bool showAtFirst;
+
+    std::unique_ptr<AACEncoder> aacEncoder;
+    std::unique_ptr<MP3Encoder> mp3Encoder;
+    std::unique_ptr<FlacEncoder> flacEncoder;
 
 };
 

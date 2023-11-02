@@ -11,7 +11,7 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 TARGET = EncodeUtility
 TEMPLATE = app
 CONFIG += c++2a
-QMAKE_CXXFLAGS += /std:c++latest
+QMAKE_CXXFLAGS += /std:c++20
 
 TRANSLATIONS = language/lang.ja
 RC_FILE = resource.rc
@@ -29,21 +29,27 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 
 SOURCES += \
-    Encoder.cpp \
+    Encoder/AACEncoder.cpp \
+    Encoder/FlacEncoder.cpp \
+    Encoder/MP3Encoder.cpp \
     Undo/SetTextCommand.cpp \
-        main.cpp \
-        MainWindow.cpp \
+    main.cpp \
+    MainWindow.cpp \
     DialogAppSettings.cpp
 
 HEADERS += \
+    Encoder/AACEncoder.h \
     AudioMetaData.hpp \
-    Encoder.h \
-        MainWindow.h \
+    Encoder/EncoderInterface.h \
+    Encoder/FlacEncoder.h \
+    Encoder/MP3Encoder.h \
+    MainWindow.h \
     DialogAppSettings.h \
+    ProjectDefines.hpp \
     Undo/SetTextCommand.h
 
 FORMS += \
-        MainWindow.ui \
+    MainWindow.ui \
     DialogAppSettings.ui
 
 RESOURCES += \

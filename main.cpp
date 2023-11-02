@@ -17,12 +17,15 @@
 * ===================================================== */
 
 #include "MainWindow.h"
+#include "ProjectDefines.hpp"
 #include <QApplication>
 #include <QTranslator>
 
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
+
+    ProjectDefines::settingFilePath = qApp->applicationDirPath()+"/setting.ini";
 
     QTranslator translator;
     if(translator.load(":lang/language/lang.qm")){
