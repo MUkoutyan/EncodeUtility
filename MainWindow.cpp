@@ -248,43 +248,35 @@ MainWindow::MainWindow(QWidget *parent)
     this->ui->imageOutputPath->setText(this->imageOutputPath);
     this->ui->imageOutputPath->setEnabled(this->ui->includeImage->isChecked());
 
-    connect(this->ui->outputM4a,    &QCheckBox::clicked, this, [this](bool checked)
-    {
-        if(this->CheckEncoder() == false){
-            return;
-        }
+    const auto SetEnableEncoder = [this](auto& encoder, bool checked){
+        if(this->CheckEncoder() == false){ return; }
+        encoder->SetIsEnableEncoder(checked);
         this->CheckEnableEncodeButton();
-        this->ui->baseFolderM4a->setEnabled(checked);
-        this->ui->m4aOutputPath->setEnabled(checked);
-    });
-    connect(this->ui->outputMp3,    &QCheckBox::clicked, this, [this](bool checked)
-    {
-        if(this->CheckEncoder() == false){
-            return;
-        }
-        this->CheckEnableEncodeButton();
-        this->ui->baseFolderMp3->setEnabled(checked);
-        this->ui->mp3OutputPath->setEnabled(checked);
-    });
-    connect(this->ui->outputFlac,    &QCheckBox::clicked, this, [this](bool checked)
-    {
-        if(this->CheckEncoder() == false){
-            return;
-        }
-        this->CheckEnableEncodeButton();
-        this->ui->baseFolderFlac->setEnabled(checked);
-        this->ui->flacOutputPath->setEnabled(checked);
-    });
+    };
+
+    connect(this->ui->outputM4a, &QCheckBox::clicked, this, std::bind(SetEnableEncoder, std::ref(this->aacEncoder), std::placeholders::_1));
+    connect(this->ui->outputM4a, &QCheckBox::clicked, this->ui->baseFolderM4a, &QLineEdit::setEnabled);
+    connect(this->ui->outputM4a, &QCheckBox::clicked, this->ui->m4aOutputPath, &QLineEdit::setEnabled);
+
+    connect(this->ui->outputMp3, &QCheckBox::clicked, this, std::bind(SetEnableEncoder, std::ref(this->mp3Encoder), std::placeholders::_1));
+    connect(this->ui->outputMp3, &QCheckBox::clicked, this->ui->baseFolderMp3, &QLineEdit::setEnabled);
+    connect(this->ui->outputMp3, &QCheckBox::clicked, this->ui->mp3OutputPath, &QLineEdit::setEnabled);
+
+    connect(this->ui->outputFlac,&QCheckBox::clicked, this, std::bind(SetEnableEncoder, std::ref(this->flacEncoder), std::placeholders::_1));
+    connect(this->ui->outputFlac,&QCheckBox::clicked, this->ui->baseFolderFlac, &QLineEdit::setEnabled);
+    connect(this->ui->outputFlac,&QCheckBox::clicked, this->ui->flacOutputPath, &QLineEdit::setEnabled);
+
     connect(this->ui->outputWav,    &QCheckBox::clicked, this, [this](bool checked){
         this->CheckEnableEncodeButton();
-        this->ui->baseFolderWav->setEnabled(checked);
-        this->ui->wavOutputPath->setEnabled(checked);
     });
+    connect(this->ui->outputWav,&QCheckBox::clicked, this->ui->baseFolderWav, &QLineEdit::setEnabled);
+    connect(this->ui->outputWav,&QCheckBox::clicked, this->ui->wavOutputPath, &QLineEdit::setEnabled);
+
     connect(this->ui->includeImage, &QCheckBox::clicked, this, [this](bool checked){
         this->CheckEnableEncodeButton();
-        this->ui->baseFolderImage->setEnabled(checked);
-        this->ui->imageOutputPath->setEnabled(checked);
     });
+    connect(this->ui->includeImage,&QCheckBox::clicked, this->ui->baseFolderImage, &QLineEdit::setEnabled);
+    connect(this->ui->includeImage,&QCheckBox::clicked, this->ui->imageOutputPath, &QLineEdit::setEnabled);
 
     connect(this->ui->selectFolder, &QToolButton::clicked, this, [this]()
     {
@@ -436,7 +428,8 @@ bool MainWindow::CheckEncoder()
     }
 
     if(CheckExistsRequiredFiles() == false){
-        QMessageBox::critical(this, tr("Not found ffmpeg"), tr("Required File not found. Check again when doing encoding."), QMessageBox::Ok);
+        //必要なファイルが見つかりません。出力にチェックを入れたときに再度確認します。
+        QMessageBox::critical(this, tr("Not found ffmpeg"), tr("Required File not found. Check again when output is checked."), QMessageBox::Ok);
         return false;
     }
     return true;
@@ -620,10 +613,47 @@ void MainWindow::openFiles(QStringList pathList)
 
     //項目があればエンコードボタンを有効
     if(this->ui->tableWidget->rowCount() > 0){
-        this->ui->encodeButton->setEnabled(true);
+        this->CheckEnableEncodeButton();
         this->ui->actionSave_as->setEnabled(true);
         this->ui->actionSave_file->setEnabled(true);
         this->ui->batchInputButton->setEnabled(true);
+    }
+}
+
+void MainWindow::CheckEnableEncodeButton()
+{
+    if(this->ui->tableWidget->rowCount() == 0){
+        this->ui->encodeButton->setEnabled(false);
+        return;
+    }
+    bool isEnable = false;
+    isEnable |= this->aacEncoder->GetIsEnableEncoder();
+    isEnable |= this->mp3Encoder->GetIsEnableEncoder();
+    isEnable |= this->flacEncoder->GetIsEnableEncoder();
+    isEnable |= this->ui->outputWav->isChecked();
+    isEnable |= this->ui->includeImage->isChecked();
+    this->ui->encodeButton->setEnabled(isEnable);
+}
+
+void MainWindow::showEvent(QShowEvent *e)
+{
+    QMainWindow::showEvent(e);
+
+    //エンコーダーの存在チェック
+    if(showAtFirst){
+        auto enable = CheckEncoder();
+
+        this->ui->baseFolderMp3->setEnabled(enable);
+        this->ui->baseFolderM4a->setEnabled(enable);
+        this->ui->baseFolderFlac->setEnabled(enable);
+        this->ui->outputMp3->setChecked(enable);
+        this->ui->outputM4a->setChecked(enable);
+        this->ui->outputFlac->setChecked(enable);
+        this->ui->mp3OutputPath->setEnabled(enable);
+        this->ui->m4aOutputPath->setEnabled(enable);
+        this->ui->flacOutputPath->setEnabled(enable);
+
+        showAtFirst = false;
     }
 }
 
@@ -683,37 +713,6 @@ void MainWindow::SaveProjectFile(QString saveFilePath)
     this->lastLoadProject = saveFilePath;
 
     this->ui->statusBar->showMessage(tr("File saved."), 3000);
-}
-
-void MainWindow::CheckEnableEncodeButton()
-{
-    if(this->ui->tableWidget->rowCount() == 0){ return; }
-    bool isEnable = false;
-    isEnable |= this->ui->outputM4a->isChecked();
-    isEnable |= this->ui->outputMp3->isChecked();
-    isEnable |= this->ui->outputFlac->isChecked();
-    isEnable |= this->ui->outputWav->isChecked();
-    isEnable |= this->ui->includeImage->isChecked();
-    this->ui->encodeButton->setEnabled(isEnable);
-}
-
-void MainWindow::showEvent(QShowEvent *e)
-{
-    QMainWindow::showEvent(e);
-
-    //エンコーダーの存在チェック
-    if(showAtFirst){
-        auto enable = CheckEncoder();
-
-        this->ui->baseFolderMp3->setEnabled(enable);
-        this->ui->baseFolderM4a->setEnabled(enable);
-        this->ui->baseFolderFlac->setEnabled(enable);
-        this->ui->outputMp3->setChecked(enable);
-        this->ui->outputM4a->setChecked(enable);
-        this->ui->outputFlac->setChecked(enable);
-
-        showAtFirst = false;
-    }
 }
 
 void MainWindow::SaveSettingFile(QString key, QVariant value)
@@ -830,9 +829,8 @@ void MainWindow::Encode()
     const QString outputFolder = this->ui->outputFolderPath->text();
     //出力先フォルダを作成 エンコーダーの有無・出力チェックの状態に応じてフォルダを作成
     QDir().mkdir(outputFolder);
-    if(this->ui->outputM4a->isChecked()){ QDir().mkdir(outputFolder+"/m4a"); }
+    //他コーデックはコーデッククラス側で行っているため、wavのみ確認する。
     if(this->ui->outputWav->isChecked()){ QDir().mkdir(outputFolder+"/"+wavOutputPath); }
-    if(this->ui->outputMp3->isChecked()){ QDir().mkdir(outputFolder+"/mp3"); }
     if(this->ui->includeImage->isChecked())
     {
         QDir().mkdir(outputFolder+"/"+imageOutputPath);
@@ -863,6 +861,8 @@ void MainWindow::WindowsEncodeProcess()
     SetupEncoder(aacEncoder);
     SetupEncoder(mp3Encoder);
     SetupEncoder(flacEncoder);
+
+    const auto wavOutputFullPath = outputFolder + this->wavOutputPath;
 
     for(int i=0; i<size; ++i)
     {
@@ -912,9 +912,9 @@ void MainWindow::WindowsEncodeProcess()
         // ======== WAV ========
         if(this->ui->outputWav->isChecked())
         {
-            QString outputFile = outputFolder+"/wav/"+metaData.title+".wav";
+            QString outputFile = wavOutputFullPath+"/"+metaData.title+".wav";
             if(this->ui->check_addTrackNo->isChecked()){
-                outputFile = outputFolder+"/wav/"+QString("%1%2%3").arg(i+1, this->ui->num_of_digit->value()).arg(this->ui->track_no_delimiter->text()).arg(metaData.title)+".wav";
+                outputFile = wavOutputFullPath+"/"+QString("%1%2%3").arg(i+1, this->ui->num_of_digit->value()).arg(this->ui->track_no_delimiter->text()).arg(metaData.title)+".wav";
             }
             QFile::copy(inputPath, outputFile);
             this->ui->logWidget->insertPlainText(tr("copy wave file : %1(%2/%3)\n").arg(metaData.title).arg(i+1).arg(this->numEncodingMusic));

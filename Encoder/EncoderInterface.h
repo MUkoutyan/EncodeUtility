@@ -18,9 +18,7 @@ class EncoderInterface : public QObject
 {
     Q_OBJECT
 public:
-    EncoderInterface()
-        : isAddTrackNo(false),numOfDigit(0),numTotalFiles(0),numEncodingMusic(0)
-    {
+    EncoderInterface() : isAddTrackNo(false),numOfDigit(0),numTotalFiles(0),numEncodingMusic(0){
     }
     ~EncoderInterface(){}
 
@@ -56,6 +54,14 @@ public:
     void SetCodecFolderName(const QString &newCodecFolderName){
         codecFolderName = newCodecFolderName;
     }
+
+    bool GetIsEnableEncoder() const{
+        return isEnableEncoder;
+    }
+    void SetIsEnableEncoder(bool newIsEnableEncoder){
+        isEnableEncoder = newIsEnableEncoder;
+    }
+
 
 signals:
     void readStdOut(QString);
@@ -106,6 +112,7 @@ protected:
         options << "-metadata" << "disc=1/1";
     }
 
+    bool isEnableEncoder;
     bool isAddTrackNo;
     int numOfDigit;
     int numTotalFiles;      //処理するファイル数
