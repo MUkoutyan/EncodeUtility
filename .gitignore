@@ -1,1 +1,4 @@
 ﻿quazip_build/*
+lib
+*.user
+*.user*
