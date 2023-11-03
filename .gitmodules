@@ -1,0 +1,6 @@
+[submodule "quazip"]
+	path = quazip
+	url = https://github.com/stachenov/quazip.git
+[submodule "zlib"]
+	path = zlib
+	url = https://github.com/madler/zlib.git

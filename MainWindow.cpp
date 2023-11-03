@@ -37,6 +37,12 @@
 #include <QDesktopServices>
 #include <QTextStream>
 #include <QPainter>
+#include <QProgressDialog>
+
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include "quazip/quazip.h"
+#include "quazip/quazipfile.h"
 
 #include <QDebug>
 
@@ -53,6 +59,137 @@ enum TableColumn
     Year,
     ALL
 };
+
+bool downloadAndExtract(const QUrl &url, const QUrl &hashUrl, const QString &destinationDir)
+{
+    QNetworkAccessManager manager;
+
+    // 進捗ダイアログの初期化
+    QProgressDialog progressDialog;
+    progressDialog.setLabelText("downloading ffmpeg...");
+    progressDialog.setRange(0, 100);
+    progressDialog.setModal(true);
+    progressDialog.show();
+
+    auto DownloadHash = [&](){
+        // 1. SHA-256ハッシュ値のテキストファイルをダウンロード。
+        QNetworkReply *hashReply = manager.get(QNetworkRequest(hashUrl));
+        QEventLoop hashLoop;
+        QObject::connect(hashReply, &QNetworkReply::finished, &hashLoop, &QEventLoop::quit);
+        hashLoop.exec();
+        QByteArray hashData = hashReply->readAll();
+        return QString(hashData).trimmed(); // 改行やスペースを取り除く
+    };
+
+    const auto zipHash = DownloadHash();
+
+    QString zipPath = QDir::tempPath() + "/encodeutility-ffmpeg.zip";
+    if(QFile::exists(zipPath) == false)
+    {
+        QNetworkReply *reply = manager.get(QNetworkRequest(url));
+
+        if (reply->error()) {
+            qDebug() << "Download error:" << reply->errorString();
+            return false;
+        }
+
+        QObject::connect(reply, &QNetworkReply::downloadProgress, [&](qint64 bytesReceived, qint64 bytesTotal) {
+             int progress = static_cast<int>(100.0 * bytesReceived / bytesTotal);
+             progressDialog.setValue(progress);
+
+             QString labelText = QString("Downloading: %1/%2 bytes").arg(bytesReceived).arg(bytesTotal);
+             progressDialog.setLabelText(labelText);
+        });
+
+        QEventLoop loop;  // ダウンロードが終わるまで待機するためのイベントループ
+        QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+        loop.exec();
+
+        QByteArray zipData = reply->readAll();
+
+        // 3. ダウンロードしたZIPファイルのSHA-256ハッシュ値を計算。
+        QCryptographicHash hash(QCryptographicHash::Sha256);
+        hash.addData(zipData);
+        QString calculatedHash = hash.result().toHex();
+
+        // 4. ダウンロードしたハッシュ値テキストと計算されたハッシュ値を比較。
+        if (calculatedHash != zipHash) {
+            qDebug() << "Hash mismatch!";
+            return false;
+        }
+
+        QFile file(zipPath);
+        if (file.open(QIODevice::WriteOnly)) {
+            file.write(zipData);
+            file.close();
+        }
+    }
+    else
+    {
+        QFile file(zipPath);
+        if (file.open(QIODevice::ReadOnly)) {
+            QCryptographicHash hash(QCryptographicHash::Sha256);
+            hash.addData(file.readAll());
+            QString calculatedHash = hash.result().toHex();
+
+            // 4. ダウンロードしたハッシュ値テキストと計算されたハッシュ値を比較。
+            if (calculatedHash != zipHash) {
+                qDebug() << "Hash mismatch!";
+                return false;
+            }
+        }
+        else{
+            return true;
+        }
+    }
+
+    QuaZip zip(zipPath);
+    if (!zip.open(QuaZip::mdUnzip)) {
+        qDebug() << "Error opening the zip file";
+        progressDialog.setValue(100);
+        progressDialog.hide();
+        return false;
+    }
+
+    QString ffmpegExePath = "";
+    {
+        auto fileNameList = zip.getFileNameList();
+        for(const auto& name : fileNameList){
+            if(name.contains("ffmpeg.exe")){
+                ffmpegExePath = name;
+                break;
+            }
+        }
+    }
+
+    if(ffmpegExePath.isEmpty()){
+        qDebug() << "Not found ffmpeg.exe in zip";
+        progressDialog.setValue(100);
+        progressDialog.hide();
+        zip.close();
+        return false;
+    }
+
+    progressDialog.setLabelText("Extracting...");
+    progressDialog.setValue(0);
+
+    QDir dir(destinationDir);
+    QuaZipFile fileInsideZip(zipPath, ffmpegExePath);
+
+    fileInsideZip.open(QIODevice::ReadOnly);
+    QByteArray fileData = fileInsideZip.readAll();
+    fileInsideZip.close();
+
+    QFile outputFile(dir.absoluteFilePath("ffmpeg.exe"));
+    if (outputFile.open(QIODevice::WriteOnly)) {
+        outputFile.write(fileData);
+        outputFile.close();
+    }
+    progressDialog.setValue(100);
+    progressDialog.hide();
+
+    return true;
+}
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -255,28 +392,28 @@ MainWindow::MainWindow(QWidget *parent)
     };
 
     connect(this->ui->outputM4a, &QCheckBox::clicked, this, std::bind(SetEnableEncoder, std::ref(this->aacEncoder), std::placeholders::_1));
-    connect(this->ui->outputM4a, &QCheckBox::clicked, this->ui->baseFolderM4a, &QLineEdit::setEnabled);
-    connect(this->ui->outputM4a, &QCheckBox::clicked, this->ui->m4aOutputPath, &QLineEdit::setEnabled);
+    connect(this->ui->outputM4a, &QCheckBox::toggled, this->ui->baseFolderM4a, &QLineEdit::setEnabled);
+    connect(this->ui->outputM4a, &QCheckBox::toggled, this->ui->m4aOutputPath, &QLineEdit::setEnabled);
 
     connect(this->ui->outputMp3, &QCheckBox::clicked, this, std::bind(SetEnableEncoder, std::ref(this->mp3Encoder), std::placeholders::_1));
-    connect(this->ui->outputMp3, &QCheckBox::clicked, this->ui->baseFolderMp3, &QLineEdit::setEnabled);
-    connect(this->ui->outputMp3, &QCheckBox::clicked, this->ui->mp3OutputPath, &QLineEdit::setEnabled);
+    connect(this->ui->outputMp3, &QCheckBox::toggled, this->ui->baseFolderMp3, &QLineEdit::setEnabled);
+    connect(this->ui->outputMp3, &QCheckBox::toggled, this->ui->mp3OutputPath, &QLineEdit::setEnabled);
 
     connect(this->ui->outputFlac,&QCheckBox::clicked, this, std::bind(SetEnableEncoder, std::ref(this->flacEncoder), std::placeholders::_1));
-    connect(this->ui->outputFlac,&QCheckBox::clicked, this->ui->baseFolderFlac, &QLineEdit::setEnabled);
-    connect(this->ui->outputFlac,&QCheckBox::clicked, this->ui->flacOutputPath, &QLineEdit::setEnabled);
+    connect(this->ui->outputFlac,&QCheckBox::toggled, this->ui->baseFolderFlac, &QLineEdit::setEnabled);
+    connect(this->ui->outputFlac,&QCheckBox::toggled, this->ui->flacOutputPath, &QLineEdit::setEnabled);
 
     connect(this->ui->outputWav,    &QCheckBox::clicked, this, [this](bool checked){
         this->CheckEnableEncodeButton();
     });
-    connect(this->ui->outputWav,&QCheckBox::clicked, this->ui->baseFolderWav, &QLineEdit::setEnabled);
-    connect(this->ui->outputWav,&QCheckBox::clicked, this->ui->wavOutputPath, &QLineEdit::setEnabled);
+    connect(this->ui->outputWav,&QCheckBox::toggled, this->ui->baseFolderWav, &QLineEdit::setEnabled);
+    connect(this->ui->outputWav,&QCheckBox::toggled, this->ui->wavOutputPath, &QLineEdit::setEnabled);
 
     connect(this->ui->includeImage, &QCheckBox::clicked, this, [this](bool checked){
         this->CheckEnableEncodeButton();
     });
-    connect(this->ui->includeImage,&QCheckBox::clicked, this->ui->baseFolderImage, &QLineEdit::setEnabled);
-    connect(this->ui->includeImage,&QCheckBox::clicked, this->ui->imageOutputPath, &QLineEdit::setEnabled);
+    connect(this->ui->includeImage,&QCheckBox::toggled, this->ui->baseFolderImage, &QLineEdit::setEnabled);
+    connect(this->ui->includeImage,&QCheckBox::toggled, this->ui->imageOutputPath, &QLineEdit::setEnabled);
 
     connect(this->ui->selectFolder, &QToolButton::clicked, this, [this]()
     {
@@ -401,7 +538,7 @@ bool MainWindow::CheckEncoder()
     });
     QMessageBox msg(this);
     msg.setWindowTitle(tr("Not found ffmpeg"));
-    msg.setText(tr("Do you want to open a ffmpeg download link?"));
+    msg.setText(tr("ffmpeg is required for encoding.\nDo you want to open a ffmpeg download link?"));
     msg.setIcon(QMessageBox::Icon::Question);
     msg.addButton(QMessageBox::Yes);
     msg.addButton(QMessageBox::No);
@@ -410,26 +547,37 @@ bool MainWindow::CheckEncoder()
     //エンコードにはffmpegが必要です。 ダウンロードリンクを開きますか？
     if(msg.exec() == QMessageBox::Yes)
     {
-        QString url = "https://www.gyan.dev/ffmpeg/builds";
-        if(QDesktopServices::openUrl(QUrl(url))){
-            QDesktopServices::openUrl(QUrl(qApp->applicationDirPath()));
-            QMessageBox msg2(this);
-            msg2.setModal(true);
-            msg2.setWindowTitle(tr("Not found ffmpeg"));
-            //ffmpeg.exeをEncodeUtility.exeと同じ場所に置いて"OK"を押してください。
-            msg2.setText(tr("Place \"ffmpeg.exe\"in the same location as EncodeUtility.exe."));
-            msg2.addButton(QMessageBox::Ok);
-            msg2.exec();
+        bool result = downloadAndExtract(QUrl("https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"),
+                                         QUrl("https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip.sha256"),
+                                         qApp->applicationDirPath());
+
+        if(result == false)
+        {
+            QString url = "https://www.gyan.dev/ffmpeg/builds";
+            if(QDesktopServices::openUrl(QUrl(url))){
+                QDesktopServices::openUrl(QUrl(qApp->applicationDirPath()));
+                QMessageBox msg2(this);
+                msg2.setModal(true);
+                msg2.setWindowTitle(tr("Can't download ffmpeg"));
+                msg2.setIcon(QMessageBox::Critical);
+                //ffmpegのダウンロードとzipの展開に失敗しました。
+                //ffmpegのzipを手動でダウンロード・展開し、
+                //ffmpeg.exeをEncodeUtility.exeと同じ場所に置いて"OK"を押してください。
+                msg2.setText(tr("Download and extract of ffmpeg zip failed.\nDownload and extract the ffmpeg zip manually,\n") + tr("Place \"ffmpeg.exe\"in the same location as EncodeUtility.exe."));
+                msg2.addButton(QMessageBox::Ok);
+                msg2.exec();
+            }
+            else{
+                QMessageBox::critical(this, tr("Can't open URL"), tr("Can't open URL. ") + url, QMessageBox::Ok);
+                return false;
+            }
         }
-        else{
-            QMessageBox::critical(this, tr("Can't open URL"), tr("Can't open URL. ") + url, QMessageBox::Ok);
-            return false;
-        }
+
     }
 
     if(CheckExistsRequiredFiles() == false){
-        //必要なファイルが見つかりません。出力にチェックを入れたときに再度確認します。
-        QMessageBox::critical(this, tr("Not found ffmpeg"), tr("Required File not found. Check again when output is checked."), QMessageBox::Ok);
+        //エンコードに必要なファイルが見つかりません。出力にチェックを入れたときに再度確認します。
+        QMessageBox::critical(this, tr("Not found ffmpeg"), tr("Cannot find file needed for encoding. Check again when output is checked."), QMessageBox::Ok);
         return false;
     }
     return true;
@@ -642,16 +790,9 @@ void MainWindow::showEvent(QShowEvent *e)
     //エンコーダーの存在チェック
     if(showAtFirst){
         auto enable = CheckEncoder();
-
-        this->ui->baseFolderMp3->setEnabled(enable);
-        this->ui->baseFolderM4a->setEnabled(enable);
-        this->ui->baseFolderFlac->setEnabled(enable);
         this->ui->outputMp3->setChecked(enable);
         this->ui->outputM4a->setChecked(enable);
         this->ui->outputFlac->setChecked(enable);
-        this->ui->mp3OutputPath->setEnabled(enable);
-        this->ui->m4aOutputPath->setEnabled(enable);
-        this->ui->flacOutputPath->setEnabled(enable);
 
         showAtFirst = false;
     }
@@ -862,7 +1003,7 @@ void MainWindow::WindowsEncodeProcess()
     SetupEncoder(mp3Encoder);
     SetupEncoder(flacEncoder);
 
-    const auto wavOutputFullPath = outputFolder + this->wavOutputPath;
+    const auto wavOutputFullPath = outputFolder + "/" + this->wavOutputPath;
 
     for(int i=0; i<size; ++i)
     {

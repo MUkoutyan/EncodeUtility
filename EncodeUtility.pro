@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui
+QT       += core gui network
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -27,6 +27,20 @@ DEFINES += QT_DEPRECATED_WARNINGS
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
+# Custom build step
+pre_build.commands = $$PWD/build_dependencies.bat
+
+QMAKE_EXTRA_TARGETS += pre_build
+PRE_TARGETDEPS += pre_build
+
+# Link QuaZip library
+CONFIG(debug, debug|release){
+    LIBS += -L$$PWD/lib -lquazip1-qt6d -lzlibstatic
+} else {
+    LIBS += -L$$PWD/lib -lquazip1-qt6 -lzlibstatic
+}
+INCLUDEPATH += quazip
+INCLUDEPATH += zlib
 
 SOURCES += \
     Encoder/AACEncoder.cpp \

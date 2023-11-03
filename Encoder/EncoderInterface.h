@@ -18,7 +18,7 @@ class EncoderInterface : public QObject
 {
     Q_OBJECT
 public:
-    EncoderInterface() : isAddTrackNo(false),numOfDigit(0),numTotalFiles(0),numEncodingMusic(0){
+    EncoderInterface() : isAddTrackNo(false),isEnableEncoder(true),numOfDigit(0),numTotalFiles(0),numEncodingMusic(0){
     }
     ~EncoderInterface(){}
 
