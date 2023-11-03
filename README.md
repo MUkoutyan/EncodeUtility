@@ -7,14 +7,16 @@ mp3やm4aに一括で変換してくれるので、音源を差し替えたと�
 
 作業時間見積もりからパッケージ用意がほぼ消えて、ミックスに専念できるぞ！
 
+# 対応コーデック
+* AAC
+* MP3
+* Flac
+
 # 必要環境
-* Lame (mp3)
-* qaac (m4a)
-    - Apple Application Supportをインストールして下さい
+* ffmpeg ([https://ffmpeg.org/download.html](https://ffmpeg.org/download.html))
 
 # 準備
-1. LameのバイナリをEncodeUtility.exeと同じ場所に置きます。
-2. qaacのバイナリをEncodeUtility.exeと同じ場所に置きます。
+1. ffmpegが無い場合、自動でダウンロードするため不要です。
 
 # 使い方
 1. 出力フォルダに書き出し先の空のフォルダを指定します
@@ -23,12 +25,15 @@ mp3やm4aに一括で変換してくれるので、音源を差し替えたと�
 4. いい感じにアーティスト名とかを埋めます (任意)
 5. Encodeボタンを押すと出来上がり
 
+
+# 細かい使い方
+## ファイル名からテーブルを埋める
+
 ※ファイル名を"_"で区切られた名前にすると、勝手に内容を埋めてくれます。
 区切り文字は変更可能です。
 
-ex.) 1_NiceMusic_Koutyan_AwsomeAlbum_SoundTrack.wav
+ex.) 1_NiceMusic_Kunatsu_AwsomeAlbum_SoundTrack.wav
 
-# 細かい使い方
 ## テーブル入力
 ・選択したセルの内どれか1つに文字を入力することで、選択したセルを全て同じ内容で埋めることが出来ます。
 
@@ -42,7 +47,4 @@ ex.) 1_NiceMusic_Koutyan_AwsomeAlbum_SoundTrack.wav
 ```
 トラック番号が桁数に満たない場合、スペースが追加されます。
 
-
-# その他
-* メタデータはiTunes準拠になっています。これを使う人はどうせiTunes入れてるだろうと思っています。
 
