@@ -20,6 +20,10 @@
 #include "ui_MainWindow.h"
 #include "ProjectDefines.hpp"
 
+#include "Encoder/AACEncoder.h"
+#include "Encoder/MP3Encoder.h"
+#include "Encoder/FlacEncoder.h"
+
 #include <QLabel>
 #include <QDropEvent>
 #include <QDragEnterEvent>
@@ -66,7 +70,7 @@ bool downloadAndExtract(const QUrl &url, const QUrl &hashUrl, const QString &des
 
     // 進捗ダイアログの初期化
     QProgressDialog progressDialog;
-    progressDialog.setLabelText("downloading ffmpeg...");
+    progressDialog.setLabelText(QObject::tr("downloading ffmpeg..."));
     progressDialog.setRange(0, 100);
     progressDialog.setModal(true);
     progressDialog.show();
@@ -96,11 +100,11 @@ bool downloadAndExtract(const QUrl &url, const QUrl &hashUrl, const QString &des
         }
 
         QObject::connect(reply, &QNetworkReply::downloadProgress, [&](qint64 bytesReceived, qint64 bytesTotal) {
-             int progress = static_cast<int>(100.0 * bytesReceived / bytesTotal);
-             progressDialog.setValue(progress);
-
-             QString labelText = QString("downloading ffmpeg...\nDownloading: %1/%2 bytes").arg(bytesReceived).arg(bytesTotal);
-             progressDialog.setLabelText(labelText);
+            int progress = static_cast<int>(100.0 * bytesReceived / bytesTotal);
+            progressDialog.setValue(progress);
+            //ダウンロード完了後、自動でffmpeg.exeを配置します。
+            QString labelText = QObject::tr("downloading ffmpeg...\nAfter the download is complete, ffmpeg.exe will be placed automatically.\nDownloading: %1/%2 bytes").arg(bytesReceived).arg(bytesTotal);
+            progressDialog.setLabelText(labelText);
         });
 
         QEventLoop loop;  // ダウンロードが終わるまで待機するためのイベントループ
@@ -183,7 +187,7 @@ bool downloadAndExtract(const QUrl &url, const QUrl &hashUrl, const QString &des
         return false;
     }
 
-    progressDialog.setLabelText("Extracting...");
+    progressDialog.setLabelText(QObject::tr("Extracting..."));
     progressDialog.setValue(0);
 
     QDir dir(destinationDir);
@@ -223,12 +227,12 @@ bool MainWindow::CheckEncoder()
     QMessageBox msg(this);
     msg.setWindowTitle(tr("Not found ffmpeg"));
     msg.setTextFormat(Qt::RichText);
-    msg.setText(tr("ffmpeg is required for encoding.\nDo you want to open a ffmpeg download link?\n(from: <a href=\"https://www.gyan.dev/ffmpeg/builds\">https://www.gyan.dev/ffmpeg/builds</a> -> ffmpeg-release-essentials.zip)"));
+    //エンコードにはffmpegが必要です。ffmpegを自動ダウンロードしますか？
+    msg.setText(tr("ffmpeg is required for encoding.\nDo you want to auto download ffmpeg?\n(from: <a href=\"https://www.gyan.dev/ffmpeg/builds\">https://www.gyan.dev/ffmpeg/builds</a> -> ffmpeg-release-essentials.zip)"));
     msg.setIcon(QMessageBox::Icon::Question);
     msg.addButton(QMessageBox::Yes);
     msg.addButton(QMessageBox::No);
     msg.setDefaultButton(QMessageBox::Yes);
-    //エンコードにはffmpegが必要です。 ダウンロードリンクを開きますか？
     if(msg.exec() == QMessageBox::Yes)
     {
         bool result = downloadAndExtract(QUrl("https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"),
@@ -284,21 +288,7 @@ MainWindow::MainWindow(QWidget *parent)
     , batchEntryWidget(new QWidget(this, Qt::Popup))
     , showAtFirst(true)
 {
-    ui->setupUi(this);
-
-    encoderComponents = {
-        EncoderComponents{std::make_shared<AACEncoder>(),  this->ui->outputM4a,  this->ui->baseFolderM4a,   this->ui->m4aOutputPath},
-        EncoderComponents{std::make_shared<MP3Encoder>(),  this->ui->outputFlac, this->ui->baseFolderFlac,  this->ui->flacOutputPath},
-        EncoderComponents{std::make_shared<FlacEncoder>(), this->ui->outputMp3,  this->ui->baseFolderMp3,   this->ui->mp3OutputPath},
-    };
-
     QApplication::setStyle("fusion");
-
-    auto toolVer = this->ui->menuAbout->addAction(ProjectDefines::applicationVersion);
-    toolVer->setEnabled(false);
-    auto projVer = this->ui->menuAbout->addAction(QString("Project Version ") + ProjectDefines::projectVersion);
-    projVer->setEnabled(false);
-
     //スタイルシートの設定
     QFile file(":qss/style/style.qss");
     if (file.open(QIODevice::ReadOnly | QIODevice::Text))
@@ -310,16 +300,34 @@ MainWindow::MainWindow(QWidget *parent)
     }
     file.close();
 
+    ui->setupUi(this);
+
+    //this->ui->内のアドレスを使用するため、setUi後に行うこと。
+    encoderComponents = {
+        EncoderComponents{std::make_shared<AACEncoder>(),  this->ui->outputM4a,  this->ui->baseFolderM4a,   this->ui->m4aOutputPath},
+        EncoderComponents{std::make_shared<MP3Encoder>(),  this->ui->outputFlac, this->ui->baseFolderFlac,  this->ui->flacOutputPath},
+        EncoderComponents{std::make_shared<FlacEncoder>(), this->ui->outputMp3,  this->ui->baseFolderMp3,   this->ui->mp3OutputPath},
+    };
+
+    auto toolVer = this->ui->menuAbout->addAction(ProjectDefines::applicationVersion);
+    toolVer->setEnabled(false);
+    auto projVer = this->ui->menuAbout->addAction(QString("Project Version ") + ProjectDefines::projectVersion);
+    projVer->setEnabled(false);
+
     widgetListDisableDuringEncode = {
         this->ui->encodeButton, this->ui->tableWidget,
-        this->ui->outputMp3,    this->ui->baseFolderMp3,    this->ui->mp3OutputPath,
-        this->ui->outputM4a,    this->ui->baseFolderM4a,    this->ui->m4aOutputPath,
-        this->ui->outputFlac,   this->ui->baseFolderFlac,   this->ui->flacOutputPath,
         this->ui->outputWav,    this->ui->baseFolderWav,    this->ui->wavOutputPath,
         this->ui->includeImage, this->ui->baseFolderImage,  this->ui->imageOutputPath,
         this->ui->outputFolderPath,
         this->ui->check_addTrackNo, this->ui->label_2, this->ui->track_no_delimiter, this->ui->label_3, this->ui->num_of_digit
     };
+
+    for(auto& component : encoderComponents)
+    {
+        widgetListDisableDuringEncode.emplace_back(component.enableCheck);
+        widgetListDisableDuringEncode.emplace_back(component.baseFolder);
+        widgetListDisableDuringEncode.emplace_back(component.outputPath);
+    }
 
     this->tableMenu = new QMenu(this->ui->tableWidget);
     this->artworkMenu = new QMenu(this->ui->artwork);
@@ -379,10 +387,11 @@ MainWindow::MainWindow(QWidget *parent)
     });
 
     //出力先の取得と表示
-    connect(this->ui->outputFolderPath, &QLineEdit::textChanged, this, [this](QString path){
-        this->ui->baseFolderMp3->setText(path+"/");
-        this->ui->baseFolderM4a->setText(path+"/");
-        this->ui->baseFolderFlac->setText(path+"/");
+    connect(this->ui->outputFolderPath, &QLineEdit::textChanged, this, [this](QString path)
+    {
+        for(auto& component : encoderComponents){
+            component.baseFolder->setText(path+"/");
+        }
         this->ui->baseFolderWav->setText(path+"/");
         this->ui->baseFolderImage->setText(path+"/");
     });
@@ -406,17 +415,12 @@ MainWindow::MainWindow(QWidget *parent)
         ChangeVisible(this->ui->label_4);
         ChangeVisible(this->ui->filenameDelimiter);
 
-        ChangeVisible(this->ui->outputMp3);
-        ChangeVisible(this->ui->baseFolderMp3);
-        ChangeVisible(this->ui->mp3OutputPath);
-
-        ChangeVisible(this->ui->outputM4a);
-        ChangeVisible(this->ui->baseFolderM4a);
-        ChangeVisible(this->ui->m4aOutputPath);
-
-        ChangeVisible(this->ui->outputFlac);
-        ChangeVisible(this->ui->baseFolderFlac);
-        ChangeVisible(this->ui->flacOutputPath);
+        for(auto& component : encoderComponents)
+        {
+            ChangeVisible(component.enableCheck);
+            ChangeVisible(component.baseFolder);
+            ChangeVisible(component.outputPath);
+        }
 
         ChangeVisible(this->ui->outputWav);
         ChangeVisible(this->ui->baseFolderWav);
@@ -428,20 +432,6 @@ MainWindow::MainWindow(QWidget *parent)
 
         ChangeVisible(this->ui->option_addTrackNo);
     });
-
-
-    connect(this->ui->wavOutputPath, &QLineEdit::textEdited, this, [this](QString text){
-        this->wavOutputPath = std::move(text);
-    });
-    connect(this->ui->imageOutputPath, &QLineEdit::textEdited, this, [this](QString text){
-        this->imageOutputPath = std::move(text);
-    });
-
-    this->ui->wavOutputPath->setText(this->wavOutputPath);
-    this->ui->wavOutputPath->setEnabled(this->ui->outputWav->isChecked());
-
-    this->ui->imageOutputPath->setText(this->imageOutputPath);
-    this->ui->imageOutputPath->setEnabled(this->ui->includeImage->isChecked());
 
     for(auto& component : encoderComponents)
     {
@@ -465,13 +455,27 @@ MainWindow::MainWindow(QWidget *parent)
         connect(component.enableCheck, &QCheckBox::toggled, component.outputPath, &QLineEdit::setEnabled);
     }
 
-    connect(this->ui->outputWav,    &QCheckBox::clicked, this, [this](bool checked){
+
+    connect(this->ui->wavOutputPath, &QLineEdit::textEdited, this, [this](QString text){
+        this->wavOutputPath = std::move(text);
+    });
+    this->ui->wavOutputPath->setText(this->wavOutputPath);
+    this->ui->wavOutputPath->setEnabled(this->ui->outputWav->isChecked());
+
+    connect(this->ui->outputWav,    &QCheckBox::clicked, this, [this](bool){
         this->CheckEnableEncodeButton();
     });
     connect(this->ui->outputWav,&QCheckBox::toggled, this->ui->baseFolderWav, &QLineEdit::setEnabled);
     connect(this->ui->outputWav,&QCheckBox::toggled, this->ui->wavOutputPath, &QLineEdit::setEnabled);
 
-    connect(this->ui->includeImage, &QCheckBox::clicked, this, [this](bool checked){
+
+    connect(this->ui->imageOutputPath, &QLineEdit::textEdited, this, [this](QString text){
+        this->imageOutputPath = std::move(text);
+    });
+    this->ui->imageOutputPath->setText(this->imageOutputPath);
+    this->ui->imageOutputPath->setEnabled(this->ui->includeImage->isChecked());
+
+    connect(this->ui->includeImage, &QCheckBox::clicked, this, [this](bool){
         this->CheckEnableEncodeButton();
     });
     connect(this->ui->includeImage,&QCheckBox::toggled, this->ui->baseFolderImage, &QLineEdit::setEnabled);

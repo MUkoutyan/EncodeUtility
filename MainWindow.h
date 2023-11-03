@@ -21,11 +21,10 @@
 #include <QMainWindow>
 #include <QCheckBox>
 #include <QLabel>
+#include <QLineEdit>
+#include "Encoder/EncoderInterface.h"
 #include "DialogAppSettings.h"
 #include <QUndoCommand>
-#include "Encoder/AACEncoder.h"
-#include "Encoder/MP3Encoder.h"
-#include "Encoder/FlacEncoder.h"
 
 namespace Ui {
 class MainWindow;
