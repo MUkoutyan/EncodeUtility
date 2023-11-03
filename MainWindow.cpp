@@ -84,7 +84,9 @@ bool downloadAndExtract(const QUrl &url, const QUrl &hashUrl, const QString &des
     const auto zipHash = DownloadHash();
 
     QString zipPath = QDir::tempPath() + "/encodeutility-ffmpeg.zip";
+#ifdef QT_DEBUG
     if(QFile::exists(zipPath) == false)
+#endif
     {
         QNetworkReply *reply = manager.get(QNetworkRequest(url));
 
@@ -97,13 +99,22 @@ bool downloadAndExtract(const QUrl &url, const QUrl &hashUrl, const QString &des
              int progress = static_cast<int>(100.0 * bytesReceived / bytesTotal);
              progressDialog.setValue(progress);
 
-             QString labelText = QString("Downloading: %1/%2 bytes").arg(bytesReceived).arg(bytesTotal);
+             QString labelText = QString("downloading ffmpeg...\nDownloading: %1/%2 bytes").arg(bytesReceived).arg(bytesTotal);
              progressDialog.setLabelText(labelText);
         });
 
         QEventLoop loop;  // ダウンロードが終わるまで待機するためのイベントループ
+        QObject::connect(&progressDialog, &QProgressDialog::canceled, [&]() {
+            reply->abort();
+            loop.quit();
+        });
         QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
         loop.exec();
+
+        if(progressDialog.wasCanceled()){
+            qDebug() << "Download Canceled";
+            return false;
+        }
 
         QByteArray zipData = reply->readAll();
 
@@ -124,6 +135,7 @@ bool downloadAndExtract(const QUrl &url, const QUrl &hashUrl, const QString &des
             file.close();
         }
     }
+#ifdef QT_DEBUG
     else
     {
         QFile file(zipPath);
@@ -142,6 +154,7 @@ bool downloadAndExtract(const QUrl &url, const QUrl &hashUrl, const QString &des
             return true;
         }
     }
+#endif
 
     QuaZip zip(zipPath);
     if (!zip.open(QuaZip::mdUnzip)) {
@@ -191,6 +204,69 @@ bool downloadAndExtract(const QUrl &url, const QUrl &hashUrl, const QString &des
     return true;
 }
 
+
+bool MainWindow::CheckEncoder()
+{
+    auto CheckExistsRequiredFiles = [](){
+        bool hit = true;
+        QStringList requiredFiles = {
+            "ffmpeg.exe"
+        };
+        for(auto& url : requiredFiles){ hit &= QFile::exists(qApp->applicationDirPath()+"/"+url); }
+        return hit;
+    };
+
+    if(CheckExistsRequiredFiles()){
+        return true;
+    }
+
+    QMessageBox msg(this);
+    msg.setWindowTitle(tr("Not found ffmpeg"));
+    msg.setTextFormat(Qt::RichText);
+    msg.setText(tr("ffmpeg is required for encoding.\nDo you want to open a ffmpeg download link?\n(from: <a href=\"https://www.gyan.dev/ffmpeg/builds\">https://www.gyan.dev/ffmpeg/builds</a> -> ffmpeg-release-essentials.zip)"));
+    msg.setIcon(QMessageBox::Icon::Question);
+    msg.addButton(QMessageBox::Yes);
+    msg.addButton(QMessageBox::No);
+    msg.setDefaultButton(QMessageBox::Yes);
+    //エンコードにはffmpegが必要です。 ダウンロードリンクを開きますか？
+    if(msg.exec() == QMessageBox::Yes)
+    {
+        bool result = downloadAndExtract(QUrl("https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"),
+                                         QUrl("https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip.sha256"),
+                                         qApp->applicationDirPath());
+
+        if(result == false)
+        {
+            QString url = "https://www.gyan.dev/ffmpeg/builds";
+            if(QDesktopServices::openUrl(QUrl(url))){
+                QDesktopServices::openUrl(QUrl(qApp->applicationDirPath()));
+                QMessageBox msg2(this);
+                msg2.setModal(true);
+                msg2.setWindowTitle(tr("Can't download ffmpeg"));
+                msg2.setIcon(QMessageBox::Warning);
+                //ffmpegのダウンロードとzipの展開に失敗しました。
+                //ffmpegのzipを手動でダウンロード・展開し、
+                //ffmpeg.exeをEncodeUtility.exeと同じ場所に置いて"OK"を押してください。
+                msg2.setText(tr("Download and extract of ffmpeg zip failed.\nDownload and extract the ffmpeg zip manually,\n") + tr("Place \"ffmpeg.exe\"in the same location as EncodeUtility.exe."));
+                msg2.addButton(QMessageBox::Ok);
+                msg2.exec();
+            }
+            else{
+                QMessageBox::critical(this, tr("Can't open URL"), tr("Can't open URL. ") + url, QMessageBox::Ok);
+                return false;
+            }
+        }
+
+    }
+
+    if(CheckExistsRequiredFiles() == false){
+        //エンコードに必要なファイルが見つかりません。出力にチェックを入れたときに再度確認します。
+        QMessageBox::critical(this, tr("Not found ffmpeg"), tr("Cannot find file needed for encoding. Check again when output is checked."), QMessageBox::Ok);
+        return false;
+    }
+    return true;
+}
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -206,14 +282,16 @@ MainWindow::MainWindow(QWidget *parent)
     , lastLoadProject("")
     , currentWorkDirectory(QStandardPaths::standardLocations(QStandardPaths::DocumentsLocation)[0])
     , batchEntryWidget(new QWidget(this, Qt::Popup))
-    , checkFFmgepFile(true)
     , showAtFirst(true)
-    , aacEncoder(std::make_unique<AACEncoder>())
-    , mp3Encoder(std::make_unique<MP3Encoder>())
-    , flacEncoder(std::make_unique<FlacEncoder>())
 {
-
     ui->setupUi(this);
+
+    encoderComponents = {
+        EncoderComponents{std::make_shared<AACEncoder>(),  this->ui->outputM4a,  this->ui->baseFolderM4a,   this->ui->m4aOutputPath},
+        EncoderComponents{std::make_shared<MP3Encoder>(),  this->ui->outputFlac, this->ui->baseFolderFlac,  this->ui->flacOutputPath},
+        EncoderComponents{std::make_shared<FlacEncoder>(), this->ui->outputMp3,  this->ui->baseFolderMp3,   this->ui->mp3OutputPath},
+    };
+
     QApplication::setStyle("fusion");
 
     auto toolVer = this->ui->menuAbout->addAction(ProjectDefines::applicationVersion);
@@ -351,15 +429,7 @@ MainWindow::MainWindow(QWidget *parent)
         ChangeVisible(this->ui->option_addTrackNo);
     });
 
-    connect(this->ui->m4aOutputPath, &QLineEdit::textEdited, this, [this](QString text){
-        this->aacEncoder->SetCodecFolderName(std::move(text));
-    });
-    connect(this->ui->mp3OutputPath, &QLineEdit::textEdited, this, [this](QString text){
-        this->mp3Encoder->SetCodecFolderName(std::move(text));
-    });
-    connect(this->ui->flacOutputPath, &QLineEdit::textEdited, this, [this](QString text){
-        this->flacEncoder->SetCodecFolderName(std::move(text));
-    });
+
     connect(this->ui->wavOutputPath, &QLineEdit::textEdited, this, [this](QString text){
         this->wavOutputPath = std::move(text);
     });
@@ -367,41 +437,33 @@ MainWindow::MainWindow(QWidget *parent)
         this->imageOutputPath = std::move(text);
     });
 
-    this->ui->mp3OutputPath->setText(this->mp3Encoder->GetCodecFolderName());
-    this->ui->mp3OutputPath->setEnabled(this->ui->outputMp3->isChecked());
-    this->ui->baseFolderMp3->setEnabled(this->ui->outputMp3->isChecked());
-
-    this->ui->m4aOutputPath->setText(this->aacEncoder->GetCodecFolderName());
-    this->ui->m4aOutputPath->setEnabled(this->ui->outputM4a->isChecked());
-    this->ui->baseFolderM4a->setEnabled(this->ui->outputM4a->isChecked());
-
-    this->ui->flacOutputPath->setText(this->flacEncoder->GetCodecFolderName());
-    this->ui->flacOutputPath->setEnabled(this->ui->outputFlac->isChecked());
-    this->ui->baseFolderFlac->setEnabled(this->ui->outputFlac->isChecked());
-
     this->ui->wavOutputPath->setText(this->wavOutputPath);
     this->ui->wavOutputPath->setEnabled(this->ui->outputWav->isChecked());
 
     this->ui->imageOutputPath->setText(this->imageOutputPath);
     this->ui->imageOutputPath->setEnabled(this->ui->includeImage->isChecked());
 
-    const auto SetEnableEncoder = [this](auto& encoder, bool checked){
-        if(this->CheckEncoder() == false){ return; }
-        encoder->SetIsEnableEncoder(checked);
-        this->CheckEnableEncodeButton();
-    };
+    for(auto& component : encoderComponents)
+    {
+        connect(component.outputPath, &QLineEdit::textEdited, this, [&component](QString text){
+            component.encoder->SetCodecFolderName(std::move(text));
+        });
 
-    connect(this->ui->outputM4a, &QCheckBox::clicked, this, std::bind(SetEnableEncoder, std::ref(this->aacEncoder), std::placeholders::_1));
-    connect(this->ui->outputM4a, &QCheckBox::toggled, this->ui->baseFolderM4a, &QLineEdit::setEnabled);
-    connect(this->ui->outputM4a, &QCheckBox::toggled, this->ui->m4aOutputPath, &QLineEdit::setEnabled);
+        component.outputPath->setText(component.encoder->GetCodecFolderName());
+        component.outputPath->setEnabled(component.enableCheck->isChecked());
+        component.baseFolder->setEnabled(component.enableCheck->isChecked());
 
-    connect(this->ui->outputMp3, &QCheckBox::clicked, this, std::bind(SetEnableEncoder, std::ref(this->mp3Encoder), std::placeholders::_1));
-    connect(this->ui->outputMp3, &QCheckBox::toggled, this->ui->baseFolderMp3, &QLineEdit::setEnabled);
-    connect(this->ui->outputMp3, &QCheckBox::toggled, this->ui->mp3OutputPath, &QLineEdit::setEnabled);
-
-    connect(this->ui->outputFlac,&QCheckBox::clicked, this, std::bind(SetEnableEncoder, std::ref(this->flacEncoder), std::placeholders::_1));
-    connect(this->ui->outputFlac,&QCheckBox::toggled, this->ui->baseFolderFlac, &QLineEdit::setEnabled);
-    connect(this->ui->outputFlac,&QCheckBox::toggled, this->ui->flacOutputPath, &QLineEdit::setEnabled);
+        connect(component.enableCheck, &QCheckBox::clicked, this, [&](bool checked){
+            if(this->CheckEncoder() == false){
+                component.enableCheck->setChecked(false);
+                return;
+            }
+            component.encoder->SetIsEnableEncoder(checked);
+            this->CheckEnableEncodeButton();
+        });
+        connect(component.enableCheck, &QCheckBox::toggled, component.baseFolder, &QLineEdit::setEnabled);
+        connect(component.enableCheck, &QCheckBox::toggled, component.outputPath, &QLineEdit::setEnabled);
+    }
 
     connect(this->ui->outputWav,    &QCheckBox::clicked, this, [this](bool checked){
         this->CheckEnableEncodeButton();
@@ -423,7 +485,7 @@ MainWindow::MainWindow(QWidget *parent)
         this->ui->outputFolderPath->setText(dir);
     });
     connect(this->ui->openFolder, &QToolButton::clicked, this, [this](){
-        QDesktopServices::openUrl(QUrl(this->ui->outputFolderPath->text()));
+        QDesktopServices::openUrl(QUrl("file:///"+this->ui->outputFolderPath->text()));
     });
 
     QAction* delete_artwork_action = this->artworkMenu->addAction(tr("Delete Artwork"));
@@ -504,83 +566,12 @@ MainWindow::MainWindow(QWidget *parent)
             }
         });
     };
-    InitEncodeProcess(this->aacEncoder);
-    InitEncodeProcess(this->mp3Encoder);
-    InitEncodeProcess(this->flacEncoder);
+    for(auto& component : encoderComponents){
+        InitEncodeProcess(component.encoder);
+    }
 
     //設定ファイルの読み込み
     LoadSettingFile();
-}
-
-bool MainWindow::CheckEncoder()
-{
-    auto CheckExistsRequiredFiles = [](){
-        bool hit = true;
-        QStringList requiredFiles = {
-            "ffmpeg.exe"
-        };
-        for(auto& url : requiredFiles){ hit &= QFile::exists(qApp->applicationDirPath()+"/"+url); }
-        return hit;
-    };
-
-    if(CheckExistsRequiredFiles()){
-        return true;
-    }
-
-    if(this->checkFFmgepFile == false){
-        return true;
-    }
-
-    QCheckBox* checkBox = new QCheckBox(QObject::tr("Don't show again."));
-    connect(checkBox, &QCheckBox::stateChanged, this, [this](int state){
-        this->checkFFmgepFile = static_cast<Qt::CheckState>(state) != Qt::CheckState::Checked;
-        this->SaveSettingFile(ProjectDefines::settingCheckFFmpegFile, this->checkFFmgepFile);
-    });
-    QMessageBox msg(this);
-    msg.setWindowTitle(tr("Not found ffmpeg"));
-    msg.setText(tr("ffmpeg is required for encoding.\nDo you want to open a ffmpeg download link?"));
-    msg.setIcon(QMessageBox::Icon::Question);
-    msg.addButton(QMessageBox::Yes);
-    msg.addButton(QMessageBox::No);
-    msg.setDefaultButton(QMessageBox::Yes);
-    msg.setCheckBox(checkBox);
-    //エンコードにはffmpegが必要です。 ダウンロードリンクを開きますか？
-    if(msg.exec() == QMessageBox::Yes)
-    {
-        bool result = downloadAndExtract(QUrl("https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"),
-                                         QUrl("https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip.sha256"),
-                                         qApp->applicationDirPath());
-
-        if(result == false)
-        {
-            QString url = "https://www.gyan.dev/ffmpeg/builds";
-            if(QDesktopServices::openUrl(QUrl(url))){
-                QDesktopServices::openUrl(QUrl(qApp->applicationDirPath()));
-                QMessageBox msg2(this);
-                msg2.setModal(true);
-                msg2.setWindowTitle(tr("Can't download ffmpeg"));
-                msg2.setIcon(QMessageBox::Critical);
-                //ffmpegのダウンロードとzipの展開に失敗しました。
-                //ffmpegのzipを手動でダウンロード・展開し、
-                //ffmpeg.exeをEncodeUtility.exeと同じ場所に置いて"OK"を押してください。
-                msg2.setText(tr("Download and extract of ffmpeg zip failed.\nDownload and extract the ffmpeg zip manually,\n") + tr("Place \"ffmpeg.exe\"in the same location as EncodeUtility.exe."));
-                msg2.addButton(QMessageBox::Ok);
-                msg2.exec();
-            }
-            else{
-                QMessageBox::critical(this, tr("Can't open URL"), tr("Can't open URL. ") + url, QMessageBox::Ok);
-                return false;
-            }
-        }
-
-    }
-
-    if(CheckExistsRequiredFiles() == false){
-        //エンコードに必要なファイルが見つかりません。出力にチェックを入れたときに再度確認します。
-        QMessageBox::critical(this, tr("Not found ffmpeg"), tr("Cannot find file needed for encoding. Check again when output is checked."), QMessageBox::Ok);
-        return false;
-    }
-    return true;
 }
 
 void MainWindow::CreateBatchEntryWidgets()
@@ -775,9 +766,9 @@ void MainWindow::CheckEnableEncodeButton()
         return;
     }
     bool isEnable = false;
-    isEnable |= this->aacEncoder->GetIsEnableEncoder();
-    isEnable |= this->mp3Encoder->GetIsEnableEncoder();
-    isEnable |= this->flacEncoder->GetIsEnableEncoder();
+    for(const auto& component : encoderComponents){
+        isEnable |= component.encoder->GetIsEnableEncoder();
+    }
     isEnable |= this->ui->outputWav->isChecked();
     isEnable |= this->ui->includeImage->isChecked();
     this->ui->encodeButton->setEnabled(isEnable);
@@ -860,7 +851,6 @@ void MainWindow::SaveSettingFile(QString key, QVariant value)
 {
     QSettings settingfile(ProjectDefines::settingFilePath, QSettings::IniFormat);
     settingfile.setValue(ProjectDefines::settingOutputFolder, this->ui->outputFolderPath->text());
-    settingfile.setValue(ProjectDefines::settingCheckFFmpegFile, this->checkFFmgepFile);
 }
 
 
@@ -868,7 +858,6 @@ void MainWindow::LoadSettingFile()
 {
     QSettings settingfile(ProjectDefines::settingFilePath, QSettings::IniFormat);
     this->ui->outputFolderPath->setText(settingfile.value(ProjectDefines::settingOutputFolder, this->ui->outputFolderPath->text()).toString());
-    this->checkFFmgepFile = settingfile.value(ProjectDefines::settingCheckFFmpegFile, true).toBool();
 }
 
 void MainWindow::loadProjectFile(QString projFilePath)
@@ -991,17 +980,14 @@ void MainWindow::WindowsEncodeProcess()
     const QString outputFolder = this->ui->outputFolderPath->text();
     const int size = this->ui->tableWidget->rowCount();
 
-    const auto SetupEncoder = [&](const auto& encoder){
-        encoder->SetOutputFolderPath(outputFolder);
-        encoder->SetIsAddTrackNo(this->ui->check_addTrackNo->isChecked());
-        encoder->SetNumOfDigit(this->ui->num_of_digit->value());
-        encoder->SetTrackNumberDelimiter(this->ui->track_no_delimiter->text());
-        encoder->SetNumEncodingMusic(this->numEncodingMusic);
-    };
 
-    SetupEncoder(aacEncoder);
-    SetupEncoder(mp3Encoder);
-    SetupEncoder(flacEncoder);
+    for(const auto& component : encoderComponents){
+        component.encoder->SetOutputFolderPath(outputFolder);
+        component.encoder->SetIsAddTrackNo(this->ui->check_addTrackNo->isChecked());
+        component.encoder->SetNumOfDigit(this->ui->num_of_digit->value());
+        component.encoder->SetTrackNumberDelimiter(this->ui->track_no_delimiter->text());
+        component.encoder->SetNumEncodingMusic(this->numEncodingMusic);
+    }
 
     const auto wavOutputFullPath = outputFolder + "/" + this->wavOutputPath;
 
@@ -1020,33 +1006,16 @@ void MainWindow::WindowsEncodeProcess()
         metaData.year        = this->ui->tableWidget->item(i, TableColumn::Year)->data(Qt::DisplayRole).toString();
         metaData.artworkPath = this->artworkPath;
 
-        if(this->ui->outputM4a->isChecked())
-        {
-            if(aacEncoder->Encode(inputPath, metaData, i)){
-                this->ui->logWidget->insertPlainText(tr("start aac encoding : %1(%2/%3)\n").arg(metaData.title).arg(i+1).arg(this->numEncodingMusic));
-            }
-            else{
-                this->processedCount++;
-            }
-        }
 
-        if(this->ui->outputMp3->isChecked())
-        {
-            if(mp3Encoder->Encode(inputPath, metaData, i)){
-                this->ui->logWidget->insertPlainText(tr("start mp3 encoding : %1(%2/%3)\n").arg(metaData.title).arg(i+1).arg(this->numEncodingMusic));
-            }
-            else{
-                this->processedCount++;
-            }
-        }
-
-        if(this->ui->outputFlac->isChecked())
-        {
-            if(flacEncoder->Encode(inputPath, metaData, i)){
-                this->ui->logWidget->insertPlainText(tr("start flac encoding : %1(%2/%3)\n").arg(metaData.title).arg(i+1).arg(this->numEncodingMusic));
-            }
-            else{
-                this->processedCount++;
+        for(const auto& component : encoderComponents){
+            if(component.enableCheck->isChecked())
+            {
+                if(component.encoder->Encode(inputPath, metaData, i)){
+                    this->ui->logWidget->insertPlainText(tr("start %1 encoding : %2(%3/%4)\n").arg(component.encoder->GetCodecExtention()).arg(metaData.title).arg(i+1).arg(this->numEncodingMusic));
+                }
+                else{
+                    this->processedCount++;
+                }
             }
         }
 

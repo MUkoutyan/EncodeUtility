@@ -11,7 +11,6 @@ namespace ProjectDefines
     static constexpr char projectVersion[]   = "1.0.2";
 
     static constexpr char settingOutputFolder[]     = "OutputFolder";
-    static constexpr char settingCheckFFmpegFile[] = "CheckFFmpegFile";
     static const QStringList headerItems = {"No.", "Title", "Artist", "AlbumTitle", "AlbumArtist", "Composer", "Group", "Genre", "Year"};
 
     static QString settingFilePath;

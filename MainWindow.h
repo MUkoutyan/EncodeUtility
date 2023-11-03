@@ -19,6 +19,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QCheckBox>
 #include <QLabel>
 #include "DialogAppSettings.h"
 #include <QUndoCommand>
@@ -79,12 +80,17 @@ private:
     QWidget* batchEntryWidget;
     QStringList batchParameters;
 
-    bool checkFFmgepFile;
     bool showAtFirst;
 
-    std::unique_ptr<AACEncoder> aacEncoder;
-    std::unique_ptr<MP3Encoder> mp3Encoder;
-    std::unique_ptr<FlacEncoder> flacEncoder;
+    struct EncoderComponents{
+        std::shared_ptr<EncoderInterface> encoder;
+        QCheckBox* enableCheck;
+        QLabel* baseFolder;
+        QLineEdit* outputPath;
+    };
+
+    std::vector<EncoderComponents> encoderComponents;
+
 
 };
 
