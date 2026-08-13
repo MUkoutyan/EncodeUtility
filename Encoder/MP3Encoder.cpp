@@ -40,12 +40,12 @@ bool MP3Encoder::Encode(QString inputPath, AudioMetaData metaData, int processNu
     if(QFile::exists(artworkPath)){
         option << "-i" << artworkPath
                       << "-map" << "0" << "-map" << "1"
-                      << "-metadata:s:v" << "title=\"Album cover\""
+                      << "-metadata:s:v" << "title=Album cover"
                       << "-metadata:s:v" << "comment=\"Cover (front)\""
-                      << "-c:v" << "copy"
+                      << "-c:v" << "mjpeg"
                       << "-id3v2_version" << "3";
     }
-    option << "-c:a" << "libmp3lame" << "-q:a" << "0";
+    option << "-c:a" << "libmp3lame" << "-b:a" << "320";
 
     AppendCommonMetaDataOption(option, metaData);
 

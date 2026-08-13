@@ -46,7 +46,7 @@ bool AACEncoder::Encode(QString inputPath, AudioMetaData metaData, int processNu
                       << "-map" << "0" << "-map" << "1"
                       << "-c:v" << "mjpeg" << "-disposition:v:0" << "attached_pic";
     }
-    option << "-c:a" << "aac" << "-q:a" << "0";
+    option << "-c:a" << "aac" << "-b:a" << "320k";
 
     // メタデータオプションの追加
     AppendCommonMetaDataOption(option, metaData);

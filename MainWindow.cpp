@@ -305,8 +305,8 @@ MainWindow::MainWindow(QWidget *parent)
     //this->ui->内のアドレスを使用するため、setUi後に行うこと。
     encoderComponents = {
         EncoderComponents{std::make_shared<AACEncoder>(),  this->ui->outputM4a,  this->ui->baseFolderM4a,   this->ui->m4aOutputPath},
-        EncoderComponents{std::make_shared<MP3Encoder>(),  this->ui->outputFlac, this->ui->baseFolderFlac,  this->ui->flacOutputPath},
-        EncoderComponents{std::make_shared<FlacEncoder>(), this->ui->outputMp3,  this->ui->baseFolderMp3,   this->ui->mp3OutputPath},
+        EncoderComponents{std::make_shared<FlacEncoder>(),  this->ui->outputFlac, this->ui->baseFolderFlac,  this->ui->flacOutputPath},
+        EncoderComponents{std::make_shared<MP3Encoder>(), this->ui->outputMp3,  this->ui->baseFolderMp3,   this->ui->mp3OutputPath},
     };
 
     auto toolVer = this->ui->menuAbout->addAction(ProjectDefines::applicationVersion);
