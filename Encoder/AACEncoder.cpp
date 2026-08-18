@@ -46,7 +46,7 @@ bool AACEncoder::Encode(QString inputPath, AudioMetaData metaData, int processNu
                       << "-map" << "0" << "-map" << "1"
                       << "-c:v" << "mjpeg" << "-disposition:v:0" << "attached_pic";
     }
-    option << "-c:a" << "aac" << "-b:a" << "320k";
+    option << "-c:a" << "aac" << "-b:a" << "320k" << "-cutoff" << "20000";
 
     // メタデータオプションの追加
     AppendCommonMetaDataOption(option, metaData);
@@ -57,6 +57,7 @@ bool AACEncoder::Encode(QString inputPath, AudioMetaData metaData, int processNu
 
 
 #ifdef QT_DEBUG
+    qDebug() << option;
     emit this->readStdOut(process->program() + " ");
     emit this->readStdOut(process->arguments().join(" ") + "\n");
 #endif

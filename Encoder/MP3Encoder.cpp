@@ -39,13 +39,13 @@ bool MP3Encoder::Encode(QString inputPath, AudioMetaData metaData, int processNu
     auto artworkPath = metaData.artworkPath.replace("\\", "/");
     if(QFile::exists(artworkPath)){
         option << "-i" << artworkPath
-                      << "-map" << "0" << "-map" << "1"
-                      << "-metadata:s:v" << "title=Album cover"
-                      << "-metadata:s:v" << "comment=\"Cover (front)\""
-                      << "-c:v" << "mjpeg"
-                      << "-id3v2_version" << "3";
+            << "-map" << "0" << "-map" << "1"
+            << "-metadata:s:v" << "title=Album cover"
+            << "-metadata:s:v" << "comment=\"Cover (front)\""
+            << "-c:v" << "mjpeg";
     }
-    option << "-c:a" << "libmp3lame" << "-b:a" << "320";
+    option << "-id3v2_version" << "3";
+    option << "-c:a" << "libmp3lame" << "-b:a" << "320k" << "-compression_level" << "0";
 
     AppendCommonMetaDataOption(option, metaData);
 

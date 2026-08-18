@@ -319,7 +319,7 @@ MainWindow::MainWindow(QWidget *parent)
         this->ui->outputWav,    this->ui->baseFolderWav,    this->ui->wavOutputPath,
         this->ui->includeImage, this->ui->baseFolderImage,  this->ui->imageOutputPath,
         this->ui->outputFolderPath,
-        this->ui->check_addTrackNo, this->ui->label_2, this->ui->track_no_delimiter, this->ui->label_3, this->ui->num_of_digit
+        this->ui->check_addTrackNo, this->ui->label_2, this->ui->track_no_delimiter, this->ui->zeroPaddingLabel, this->ui->num_of_digit
     };
 
     for(auto& component : encoderComponents)
@@ -384,6 +384,12 @@ MainWindow::MainWindow(QWidget *parent)
                                                                tr("project file(*%1)").arg(ProjectDefines::projectExtention));
         settings->SetLastOpenedDirectory(openfilePath);
         this->openFiles({openfilePath});
+    });
+
+    connect(this->ui->actionEncode_Settings, &QAction::triggered, this, [this]()
+    {
+        settings->show();
+        settings->raise();
     });
 
     //出力先の取得と表示
@@ -826,6 +832,12 @@ void MainWindow::SaveProjectFile(QString saveFilePath)
     // ### Ver.1.0.2
     tableList.append(this->ui->filenameDelimiter->text());
 
+    // ### Ver.1.0.3
+    tableList.append(QVariant(this->ui->check_addTrackNo->isChecked()).toString());
+    tableList.append(QString::number(this->ui->num_of_digit->value()));
+    tableList.append(this->ui->track_no_delimiter->text());
+
+
     // ### Common
     const int row = this->ui->tableWidget->rowCount();
     const int col = this->ui->tableWidget->columnCount();
@@ -899,6 +911,12 @@ void MainWindow::loadProjectFile(QString projFilePath)
     }
     if(0x010002 <= projVersion){
         this->ui->filenameDelimiter->setText(strList[index++]);
+    }
+    if(0x010003 <= projVersion) 
+    {
+        this->ui->check_addTrackNo->setChecked(QVariant(strList[index++]).toBool());
+        this->ui->num_of_digit->setValue(strList[index++].toInt());
+        this->ui->track_no_delimiter->setText(strList[index++]);
     }
 
     int row = 0;
@@ -1028,7 +1046,7 @@ void MainWindow::WindowsEncodeProcess()
         {
             QString outputFile = wavOutputFullPath+"/"+metaData.title+".wav";
             if(this->ui->check_addTrackNo->isChecked()){
-                outputFile = wavOutputFullPath+"/"+QString("%1%2%3").arg(i+1, this->ui->num_of_digit->value()).arg(this->ui->track_no_delimiter->text()).arg(metaData.title)+".wav";
+                outputFile = wavOutputFullPath+"/"+QString("%1%2%3").arg(i + 1, this->ui->num_of_digit->value(), 10, '0').arg(this->ui->track_no_delimiter->text()).arg(metaData.title)+".wav";
             }
             QFile::copy(inputPath, outputFile);
             this->ui->logWidget->insertPlainText(tr("copy wave file : %1(%2/%3)\n").arg(metaData.title).arg(i+1).arg(this->numEncodingMusic));

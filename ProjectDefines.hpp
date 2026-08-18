@@ -5,10 +5,10 @@
 
 namespace ProjectDefines
 {
-    static constexpr char applicationVersion[] = "Version 1.0.4";
+    static constexpr char applicationVersion[] = "Version 1.0.6";
     static constexpr char projectExtention[] = ".encproj";
-    static constexpr int  projectVersionNum  = 0x010002;
-    static constexpr char projectVersion[]   = "1.0.2";
+    static constexpr int  projectVersionNum  = 0x010003;
+    static constexpr char projectVersion[]   = "1.0.3";
 
     static constexpr char settingOutputFolder[]     = "OutputFolder";
     static const QStringList headerItems = {"No.", "Title", "Artist", "AlbumTitle", "AlbumArtist", "Composer", "Group", "Genre", "Year"};

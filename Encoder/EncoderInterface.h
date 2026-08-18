@@ -77,7 +77,7 @@ protected:
         }
         QString outputFile = outputFolder+"/"+title+extension;
         if(this->isAddTrackNo){
-            outputFile = outputBaseFolderPath +"/"+ GetCodecFolderName() +"/"+QString("%1%2%3").arg(i+1, this->numOfDigit).arg(trackNumberDelimiter).arg(title)+extension;
+            outputFile = outputBaseFolderPath +"/"+ GetCodecFolderName() +"/"+QString("%1%2%3").arg(i+1, this->numOfDigit, 10, '0').arg(trackNumberDelimiter).arg(title) + extension;
         }
         return outputFile;
     };
@@ -104,7 +104,7 @@ protected:
         if(!metaData.title.isEmpty()){ options << "-metadata" << "title=" + EncloseDQ(metaData.title); }
         if(!metaData.artist.isEmpty()){ options << "-metadata" << "artist=" + EncloseDQ(metaData.artist); }
         if(!metaData.albumTitle.isEmpty()){ options << "-metadata" << "album=" + EncloseDQ(metaData.albumTitle); }
-        if(!metaData.albumArtist.isEmpty()){ options << "-metadata" << "band=" + EncloseDQ(metaData.albumArtist); }
+        if(!metaData.albumArtist.isEmpty()){ options << "-metadata" << "album_artist=" + EncloseDQ(metaData.albumArtist); }
         if(!metaData.composer.isEmpty()){ options << "-metadata" << "composer=" + EncloseDQ(metaData.composer); }
         if(!metaData.genre.isEmpty()){ options << "-metadata" << "genre=" + EncloseDQ(metaData.genre); }
         if(!metaData.year.isEmpty()){ options << "-metadata" << "date=" + EncloseDQ(metaData.year); }
@@ -117,7 +117,7 @@ protected:
     int numOfDigit;
     int numTotalFiles;      //処理するファイル数
     int numEncodingMusic;   //コーデックを抜きにした曲数
-    QString trackNumberDelimiter;
+    QString trackNumberDelimiter = "_";
 
     QString outputBaseFolderPath;   //出力先のルートフォルダパス
     QString codecFolderName;        //ルートの下に作る、コーデックごとのフォルダ名
